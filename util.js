@@ -77,8 +77,10 @@ module.exports = {
     console.log('  ', ...columnReference.map(m => ` ${m} `));
 
     board.forEach((f, i) => {
-      console.log(rowReference[i], ...f.map(m => `| ${m}`), '|');
+      console.log(rowReference[i], ...f.map(m => `| ${m}`), '|', rowReference[i]);
     });
+
+    console.log('  ', ...columnReference.map(m => ` ${m} `));
 
     console.log();
   },
@@ -339,10 +341,10 @@ module.exports = {
     console.log('* HELP *');
     console.log();
     console.log('- To move a piece, select the specified option number for the playable fields');
-    console.log('- To go back in the menu, input the option 0');
-    console.log('- The uppercase symbols (e.g. "X", "O") represent king pieces');
+    console.log('- To go back in the menu, type "0"');
+    console.log('- The uppercase symbols (e.g. "X", "O") represent KING pieces');
     console.log('- To exit, press Ctrl + C');
-    console.log('- To print the board again, type board');
+    console.log('- To print the board again, type "board"');
     console.log('- To print this help again, type "help"');
     console.log();
   },
@@ -356,8 +358,10 @@ module.exports = {
     let turnCounter = 0;
     let currentTurn = 'x';
 
-    this.setSpecialStartingPosition(board, 'o', [[0, 1], [0, 3], [0, 5], [0, 7], [1, 2], [1, 4], [1, 6], [2, 3], [2, 5], [2, 7], [3, 0], [5, 0]]);
-    this.setSpecialStartingPosition(board, 'x', [[3, 4], [4, 7], [5, 4], [5, 6], [6, 1], [6, 3], [6, 7], [7, 0], [7, 2], [7, 4], [7, 6]]);
+    this.setSpecialStartingPosition(board, 'o', [[0, 1], [0, 3], [0, 5], [0, 7], [1, 2], [1, 4], [1, 6], [2, 3], [2, 7], [4, 1], [5, 0], [6, 5]]);
+    // this.setSpecialStartingPosition(board, 'o', [[0, 1], [0, 3], [0, 5], [0, 7], [1, 2], [1, 4], [1, 6], [2, 3], [2, 5], [2, 7], [3, 0], [5, 0]]);
+    this.setSpecialStartingPosition(board, 'x', [[3, 4], [5, 4], [5, 6], [6, 1], [6, 3], [6, 7], [7, 0], [7, 2], [7, 4]]);
+    // this.setSpecialStartingPosition(board, 'x', [[3, 4], [4, 7], [5, 4], [5, 6], [6, 1], [6, 3], [6, 7], [7, 0], [7, 2], [7, 4], [7, 6]]);
     // playerChars.forEach((f, i) => this.setPlayerStartingPosition(board, f, i === 0));
 
     this.printBoard(board);
