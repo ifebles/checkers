@@ -6,6 +6,10 @@ const emptyArray = [, , , , , , , ,];
 const columnReference = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
 const rowReference = ['1', '2', '3', '4', '5', '6', '7', '8'];
 const playerChars = ['o', 'x'];
+const specialCommands = {
+  help: context => context.printHelp(),
+  board: (context, board) => context.printBoard(board),
+};
 
 
 module.exports = {
@@ -36,6 +40,23 @@ module.exports = {
         rl.close();
       });
     })
+  },
+
+  manageSpecialPrompts: function (board) {
+    return async prompt => {
+      let response = '';
+
+      while (!response) {
+        response = await this.promptUser(prompt);
+
+        if (specialCommands[response]) {
+          specialCommands[response](this, board);
+          response = '';
+        }
+      }
+
+      return response;
+    };
   },
 
   /**
@@ -108,13 +129,181 @@ module.exports = {
   },
 
   /**
+   * 
+  */
+  locatePieces: function (board, player) {
+    const pieceLocations = [];
+    board.forEach((rowItem, rowIndex) => {
+      rowItem.forEach((columnItem, columnIndex) => {
+        if (columnItem.toLowerCase() === player)
+          pieceLocations.push([rowIndex, columnIndex]);
+      });
+    });
+
+    return pieceLocations;
+  },
+
+  /**
+   * 
+   */
+  positionTranslator: function (positions) {
+    if (Array.isArray(positions[0]))
+      return positions.map(m => [rowReference[m[0]], columnReference[m[1]]]);
+
+    return positions.length ? [rowReference[positions[0]], columnReference[positions[1]]] : null;
+  },
+
+  /**
+   * 
+   */
+  calculateMovement: function (board, player, piece, startsTop, playerLocations) {
+    const oponentPlayer = this.getPlayerOrder().find(f => player !== f);
+    const pieceStatus = board[piece[0]][piece[1]] === player.toUpperCase() ? 'king' : 'normal';
+    const oponentLocations = this.locatePieces(board, oponentPlayer);
+
+    const upMovements = [
+      // Left place
+      [emptyCellChar, oponentPlayer].includes(
+        `${(board[piece[0] - 1] || [])[piece[1] - 1]}`.toLowerCase()) ?
+        [piece[0] - 1, piece[1] - 1] :
+        null,
+
+      // Right place
+      [emptyCellChar, oponentPlayer].includes(
+        `${(board[piece[0] - 1] || [])[piece[1] + 1]}`.toLowerCase()) ?
+        [piece[0] - 1, piece[1] + 1] :
+        null,
+
+    ].filter(f => f);
+
+    const downMovements = [
+      // Left place
+      [emptyCellChar, oponentPlayer].includes(
+        `${(board[piece[0] + 1] || [])[piece[1] - 1]}`.toLowerCase()) ?
+        [piece[0] + 1, piece[1] - 1] :
+        null,
+
+      // Right place
+      [emptyCellChar, oponentPlayer].includes(
+        `${(board[piece[0] + 1] || [])[piece[1] + 1]}`.toLowerCase()) ?
+        [piece[0] + 1, piece[1] + 1] :
+        null,
+    ].filter(f => f);
+
+    // if (pieceStatus)
+
+    // console.log((upMovements));
+    // console.log(this.positionTranslator(upMovements));
+    // console.log(this.positionTranslator(downMovements));
+    // console.log((downMovements));
+  },
+
+  /**
+   * 
+   */
+  calculateJump: function (board, oponentPlayer, piece) {
+    const oponentPlayer = this.getPlayerOrder().find(f => player !== f);
+
+    const upJumps = [
+      // Left place
+      `${(board[piece[0] - 1] || [])[piece[1] - 1]}`.toLowerCase() === oponentPlayer ?
+        [piece[0] - 1, piece[1] - 1] : null,
+      // Right place
+      (board[piece[0] - 1] || [])[piece[1] + 1] === emptyCellChar ? [piece[0] - 1, piece[1] + 1] : null,
+    ].filter(f => f);
+
+    const downJumps = [
+      // Left place
+      (board[piece[0] + 1] || [])[piece[1] - 1] === emptyCellChar ? [piece[0] + 1, piece[1] - 1] : null,
+      // Right place
+      (board[piece[0] + 1] || [])[piece[1] + 1] === emptyCellChar ? [piece[0] + 1, piece[1] + 1] : null,
+    ].filter(f => f);
+
+    // console.log((upMovements));
+    // console.log(this.positionTranslator(upMovements));
+    // console.log(this.positionTranslator(downMovements));
+    // console.log((downMovements));
+  },
+
+  getLocation: function (piece, verticicalPosition, horizontalPosition) {
+    const tempResult = [];
+
+    if (verticicalPosition === 'up') {
+      if (piece[0] > 0) {
+        tempResult.push(piece[1] < emptyArray.length - 1 ? [piece[0] - 1, piece[1] + 1] : null);
+        tempResult.push(piece[1] > 0 ? [piece[0] - 1, piece[1] - 1] : null);
+      }
+    }
+    else {
+      if (piece[0] < emptyArray.length - 1) {
+        tempResult.push(piece[1] < emptyArray.length - 1 ? [piece[0] + 1, piece[1] + 1] : null);
+        tempResult.push(piece[1] > 0 ? [piece[0] + 1, piece[1] - 1] : null);
+      }
+    }
+
+    if (horizontalPosition === 'right')
+      return tempResult[0];
+
+    return tempResult[1];
+  },
+
+  /**
+   * Print help
+   */
+  printHelp: function () {
+    console.log();
+    console.log('* HELP *');
+    console.log();
+    console.log('- To move a piece, select the specified option number for the playable fields');
+    console.log('- To go back in the menu, input the option 0');
+    console.log('- To exit, press Ctrl + C');
+    console.log('- To print the board again, type board');
+    console.log('- To print this help again, type "help"');
+    console.log();
+  },
+
+  /**
    * Start the game
    */
-  startGame: function () {
+  startGame: async function () {
     const board = this.getEmptyBoard();
+    const customPrompt = this.manageSpecialPrompts(board);
+    let turnCounter = 0;
+    let currentTurn = 'x';
 
-    this.getPlayerOrder().forEach((f, i) => this.setPlayerStartingPosition(board, f, i === 0));
-
+    playerChars.forEach((f, i) => this.setPlayerStartingPosition(board, f, i === 0));
     this.printBoard(board);
+    this.printHelp();
+
+    while (true) {
+      const startsTop = playerChars[0] === currentTurn;
+      turnCounter++;
+      console.log(`- Player "${currentTurn}" | turn ${Math.ceil(turnCounter / 2)} -`);
+      console.log();
+
+      const pieces = this.locatePieces(board, currentTurn);
+      const piecesLocation = this.positionTranslator(pieces);
+
+      piecesLocation.forEach((f, i) => console.log(`${i + 1}) ${f[1]}${f[0]}`));
+
+      let selectecPiece = '';
+
+      while (!selectecPiece) {
+        selectecPiece = await customPrompt();
+
+        if (isNaN(selectecPiece)
+          || +selectecPiece - 1 < 0 ||
+          +selectecPiece > pieces.length) {
+          selectecPiece = '';
+          continue;
+        }
+      }
+
+      this.calculateMovement(board, currentTurn, pieces[+selectecPiece - 1], startsTop);
+
+      await this.promptUser();
+
+      currentTurn = playerChars[(turnCounter - 1) % 2];
+    }
   },
 };
