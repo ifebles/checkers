@@ -153,14 +153,7 @@ module.exports = {
     return positions.length ? [rowReference[positions[0]], columnReference[positions[1]]] : null;
   },
 
-  /**
-   * 
-   */
-  calculateMovement: function (board, player, piece, startsTop, playerLocations) {
-    const oponentPlayer = this.getPlayerOrder().find(f => player !== f);
-    const pieceStatus = board[piece[0]][piece[1]] === player.toUpperCase() ? 'king' : 'normal';
-    const oponentLocations = this.locatePieces(board, oponentPlayer);
-
+  getAdyacentPositions: function (board, oponentPlayer, piece, direction = null) {
     const upMovements = [
       // Left place
       [emptyCellChar, oponentPlayer].includes(
@@ -190,8 +183,53 @@ module.exports = {
         null,
     ].filter(f => f);
 
-    // if (pieceStatus)
+    const possibleLocations = {
+      up: null,
+      down: null,
+    };
 
+    if (!direction) {
+      possibleLocations.down = downMovements;
+      possibleLocations.up = upMovements;
+    }
+    else {
+      if (direction === 'down')
+        possibleLocations.down = downMovements;
+      else
+        possibleLocations.up = upMovements;
+    }
+
+    return possibleLocations;
+  },
+
+  /**
+   * 
+   */
+  calculateMovement: function (board, player, piece, startsTop, playerLocations) {
+    const result = [];
+    const oponentPlayer = this.getPlayerOrder().find(f => player !== f);
+    const pieceStatus = board[piece[0]][piece[1]] === player.toUpperCase() ? 'king' : 'normal';
+    const oponentLocations = this.locatePieces(board, oponentPlayer);
+
+    const possibleLocations = this.getAdyacentPositions(board, oponentPlayer, piece, pieceStatus === 'king' ? null : startsTop ? 'down' : 'up');
+
+    Object.entries(possibleLocations).forEach(f => {
+      const direction = f[0];
+      const entries = f[1];
+
+      if (!entries)
+        return;
+
+      entries.forEach(entry => {
+        if (board[entry[0]][entry[1]] === oponentPlayer)
+          this.calculateJumps(board, oponentPlayer, entry, direction)
+            .forEach(r => result.push(r));
+        else
+          result.push(entry);
+      });
+    });
+
+    return result;
     // console.log((upMovements));
     // console.log(this.positionTranslator(upMovements));
     // console.log(this.positionTranslator(downMovements));
@@ -201,28 +239,35 @@ module.exports = {
   /**
    * 
    */
-  calculateJump: function (board, oponentPlayer, piece) {
-    const oponentPlayer = this.getPlayerOrder().find(f => player !== f);
+  calculateJumps: function (board, oponentPlayer, position, direction) {
+    const result = [];
+    const currentLocation = board[position[0]][position[1]];
 
-    const upJumps = [
-      // Left place
-      `${(board[piece[0] - 1] || [])[piece[1] - 1]}`.toLowerCase() === oponentPlayer ?
-        [piece[0] - 1, piece[1] - 1] : null,
-      // Right place
-      (board[piece[0] - 1] || [])[piece[1] + 1] === emptyCellChar ? [piece[0] - 1, piece[1] + 1] : null,
-    ].filter(f => f);
+    if (!currentLocation || currentLocation.toLowerCase() !== oponentPlayer)
+      return [];
 
-    const downJumps = [
-      // Left place
-      (board[piece[0] + 1] || [])[piece[1] - 1] === emptyCellChar ? [piece[0] + 1, piece[1] - 1] : null,
-      // Right place
-      (board[piece[0] + 1] || [])[piece[1] + 1] === emptyCellChar ? [piece[0] + 1, piece[1] + 1] : null,
-    ].filter(f => f);
+    const left = this.getLocation(position, direction, 'left');
+    const right = this.getLocation(position, direction, 'right');
 
-    // console.log((upMovements));
-    // console.log(this.positionTranslator(upMovements));
-    // console.log(this.positionTranslator(downMovements));
-    // console.log((downMovements));
+    [left, right].forEach(f => {
+      if (board[f[0]][f[1]] !== emptyCellChar)
+        return;
+
+      result.push(f);
+
+      const adyacent = this.getAdyacentPositions(board, oponentPlayer, f, direction);
+      (adyacent[direction] || []).forEach(option => {
+        this.calculateJumps(board, oponentPlayer, option, direction)
+          .forEach(entry => result.push(entry));
+      });
+    });
+
+    return result.reduce((o, e) => {
+      if (!o.find(f => f[0] === e[0] && f[1] === e[1]))
+        o.push(e);
+
+      return o;
+    }, []);
   },
 
   getLocation: function (piece, verticicalPosition, horizontalPosition) {
@@ -286,20 +331,41 @@ module.exports = {
 
       piecesLocation.forEach((f, i) => console.log(`${i + 1}) ${f[1]}${f[0]}`));
 
+
       let selectecPiece = '';
+      let selectedOption = '0';
 
-      while (!selectecPiece) {
-        selectecPiece = await customPrompt();
+      while (selectedOption === '0') {
+        while (!selectecPiece) {
+          selectecPiece = await customPrompt();
 
-        if (isNaN(selectecPiece)
-          || +selectecPiece - 1 < 0 ||
-          +selectecPiece > pieces.length) {
-          selectecPiece = '';
-          continue;
+          if (isNaN(selectecPiece)
+            || +selectecPiece - 1 < 0 ||
+            +selectecPiece > pieces.length) {
+            selectecPiece = '';
+            continue;
+          }
+        }
+
+        const options = this.calculateMovement(board, currentTurn, pieces[+selectecPiece - 1], startsTop);
+        const optionsLocation = this.positionTranslator(options);
+
+        console.log('0) go back');
+        optionsLocation.forEach((f, i) => console.log(`${i + 1}) ${f[1]}${f[0]}`));
+
+        selectedOption = '';
+        while (!selectedOption) {
+          selectedOption = await customPrompt();
+
+          if (isNaN(selectedOption)
+            || +selectedOption - 1 < 0 ||
+            +selectedOption > options.length) {
+            selectedOption = '';
+            continue;
+          }
         }
       }
 
-      this.calculateMovement(board, currentTurn, pieces[+selectecPiece - 1], startsTop);
 
       await this.promptUser();
 
