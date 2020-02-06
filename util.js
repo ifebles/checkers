@@ -434,6 +434,11 @@ module.exports = {
         });
 
         board[selectedDestination.coordinate[0]][selectedDestination.coordinate[1]] = movingPiece;
+
+        // Check for a new KING
+        if ((!startsTop && selectedDestination.coordinate[0] === 0)
+          || (startsTop && selectedDestination.coordinate[0] === 7))
+          board[selectedDestination.coordinate[0]][selectedDestination.coordinate[1]] = movingPiece.toUpperCase();
       }
 
       this.printBoard(board);
