@@ -1,8 +1,13 @@
 const util = require("./util");
 
-const board = util.getEmptyBoard();
 
-util.setPlayerStartingPosition(board, util.normalPlayerChars.O, true);
-util.setPlayerStartingPosition(board, util.normalPlayerChars.X, false);
+util.printWelcomeMessage()
+  .then(result => {
+    if (!result) {
+      console.log();
+      console.log('See you next time!');
+      return process.exit(0);
+    }
 
-util.printBoard(board)
+    util.startGame();
+  });
