@@ -204,12 +204,16 @@ module.exports = {
 
   /**
    * 
+   * @param {number[][]} board 
+   * @param {string} player 
+   * @param {number[]} piece 
+   * @param {boolean} startsTop 
+   * @returns {{coordinate: number[], killedPieces: number[][]}[]}
    */
-  calculateMovement: function (board, player, piece, startsTop, playerLocations) {
+  calculateMovement: function (board, player, piece, startsTop) {
     const result = [];
     const oponentPlayer = this.getPlayerOrder().find(f => player !== f);
     const pieceStatus = board[piece[0]][piece[1]] === player.toUpperCase() ? 'king' : 'normal';
-    const oponentLocations = this.locatePieces(board, oponentPlayer);
 
     const possibleLocations = this.getAdyacentPositions(board, oponentPlayer, piece, pieceStatus === 'king' ? null : startsTop ? 'down' : 'up');
 
@@ -225,7 +229,7 @@ module.exports = {
           this.calculateJumps(board, oponentPlayer, entry, direction)
             .forEach(r => result.push(r));
         else
-          result.push(entry);
+          result.push({ coordinate: entry, killedPieces: [] });
       });
     });
 
@@ -238,36 +242,47 @@ module.exports = {
 
   /**
    * 
+   * @param {number[][]} board 
+   * @param {string} oponentPlayer 
+   * @param {number[]} position 
+   * @param {"up"|"down"} direction 
+   * @param {number[][]} killedPieces 
+   * @returns {{coordinate: number[], killedPieces: number[][]}[]}
    */
-  calculateJumps: function (board, oponentPlayer, position, direction) {
+  calculateJumps: function (board, oponentPlayer, currentPosition, direction, killedPieces = []) {
     const result = [];
-    const currentLocation = board[position[0]][position[1]];
+    const killed = [...killedPieces];
+    const currentLocation = board[currentPosition[0]][currentPosition[1]];
 
     if (!currentLocation || currentLocation.toLowerCase() !== oponentPlayer)
       return [];
 
-    const left = this.getLocation(position, direction, 'left');
-    const right = this.getLocation(position, direction, 'right');
+    const left = this.getLocation(currentPosition, direction, 'left');
+    const right = this.getLocation(currentPosition, direction, 'right');
 
     [left, right].forEach(f => {
       if (board[f[0]][f[1]] !== emptyCellChar)
         return;
 
-      result.push(f);
+      killed.push(currentPosition);
+      result.push({ coordinate: f, killedPieces: killed });
 
       const adyacent = this.getAdyacentPositions(board, oponentPlayer, f, direction);
       (adyacent[direction] || []).forEach(option => {
-        this.calculateJumps(board, oponentPlayer, option, direction)
-          .forEach(entry => result.push(entry));
+        this.calculateJumps(board, oponentPlayer, option, direction, killed)
+          .forEach(entry => {
+            result.push(entry.coordinate);
+          });
       });
     });
 
-    return result.reduce((o, e) => {
-      if (!o.find(f => f[0] === e[0] && f[1] === e[1]))
-        o.push(e);
+    return result;
+    // .reduce((o, e) => {
+    //   if (!o.find(f => f[0] === e[0] && f[1] === e[1]))
+    //     o.push(e);
 
-      return o;
-    }, []);
+    //   return o;
+    // }, []);
   },
 
   getLocation: function (piece, verticicalPosition, horizontalPosition) {
@@ -324,51 +339,73 @@ module.exports = {
       const startsTop = playerChars[0] === currentTurn;
       turnCounter++;
       console.log(`- Player "${currentTurn}" | turn ${Math.ceil(turnCounter / 2)} -`);
-      console.log();
 
       const pieces = this.locatePieces(board, currentTurn);
       const piecesLocation = this.positionTranslator(pieces);
 
-      piecesLocation.forEach((f, i) => console.log(`${i + 1}) ${f[1]}${f[0]}`));
+      let inputMovement = '0';
 
+      while (inputMovement === '0') {
+        let inputPiece = '';
+        console.log();
+        piecesLocation.forEach((f, i) => console.log(`${i + 1}) ${f[1]}${f[0]}`));
 
-      let selectecPiece = '';
-      let selectedOption = '0';
+        while (!inputPiece) {
+          inputPiece = await customPrompt();
 
-      while (selectedOption === '0') {
-        while (!selectecPiece) {
-          selectecPiece = await customPrompt();
-
-          if (isNaN(selectecPiece)
-            || +selectecPiece - 1 < 0 ||
-            +selectecPiece > pieces.length) {
-            selectecPiece = '';
+          if (isNaN(inputPiece)
+            || +inputPiece - 1 < 0 ||
+            +inputPiece > pieces.length) {
+            inputPiece = '';
             continue;
           }
         }
 
-        const options = this.calculateMovement(board, currentTurn, pieces[+selectecPiece - 1], startsTop);
-        const optionsLocation = this.positionTranslator(options);
+        const selectedPiece = pieces[+inputPiece - 1];
+        const options = this.calculateMovement(board, currentTurn, selectedPiece, startsTop);
+        const optionsLocation = options.map(m => ({
+          coordinate: this.positionTranslator(m.coordinate),
+          killedPieces: this.positionTranslator(m.killedPieces) || [],
+        }));
 
         console.log('0) go back');
-        optionsLocation.forEach((f, i) => console.log(`${i + 1}) ${f[1]}${f[0]}`));
+        optionsLocation.forEach((f, i) =>
+          console.log(
+            `${i + 1}) ${f.coordinate[1]}${f.coordinate[0]}${
+            f.killedPieces.length ?
+              ` // Pieces killed: ${f.killedPieces.map(m => m[1] + m[0]).join(', ')}` :
+              ''}`));
 
-        selectedOption = '';
-        while (!selectedOption) {
-          selectedOption = await customPrompt();
+        inputMovement = '';
+        while (!inputMovement) {
+          inputMovement = await customPrompt();
 
-          if (isNaN(selectedOption)
-            || +selectedOption - 1 < 0 ||
-            +selectedOption > options.length) {
-            selectedOption = '';
+          if (inputMovement === '0')
+            continue;
+
+          if (isNaN(inputMovement)
+            || +inputMovement - 1 < 0 ||
+            +inputMovement > options.length) {
+            inputMovement = '';
             continue;
           }
         }
+
+        if (inputMovement === '0') {
+          inputPiece = '';
+          continue;
+        }
+
+        const selectedDestination = options[+inputMovement - 1];
+        const movingPiece = board[selectedPiece[0]][selectedPiece[1]];
+        selectedDestination.killedPieces.concat([selectedPiece]).forEach(f => {
+          board[f[0]][f[1]] = emptyCellChar;
+        });
+
+        board[selectedDestination.coordinate[0]][selectedDestination.coordinate[1]] = movingPiece;
       }
 
-
-      await this.promptUser();
-
+      this.printBoard(board);
       currentTurn = playerChars[(turnCounter - 1) % 2];
     }
   },
