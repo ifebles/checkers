@@ -218,7 +218,7 @@ module.exports = {
 
   /**
    * 
-   * @param {number[][]} board 
+   * @param {string[][]} board 
    * @param {string} player 
    * @param {number[]} piece 
    * @param {boolean} startsTop 
@@ -226,7 +226,7 @@ module.exports = {
    */
   calculateMovement: function (board, player, piece, startsTop) {
     const result = [];
-    const oponentPlayer = this.getPlayerOrder().find(f => player !== f);
+    const oponentPlayer = playerChars.find(f => player !== f);
     const pieceStatus = board[piece[0]][piece[1]] === player.toUpperCase() ? 'king' : 'normal';
 
     const possibleLocations = this.getAdyacentPositions(board, oponentPlayer, piece, pieceStatus === 'king' ? null : startsTop ? 'down' : 'up');
@@ -239,7 +239,7 @@ module.exports = {
         return;
 
       entries.forEach(entry => {
-        if (board[entry[0]][entry[1]] === oponentPlayer)
+        if (`${board[entry[0]][entry[1]]}`.toLowerCase() === oponentPlayer)
           this.calculateJumps(board, oponentPlayer, entry, direction, entry[1] > piece[1] ? 'right' : 'left')
             .forEach(r => result.push(r));
         else
@@ -256,7 +256,7 @@ module.exports = {
 
   /**
    * 
-   * @param {number[][]} board 
+   * @param {string[][]} board 
    * @param {string} oponentPlayer 
    * @param {number[]} position 
    * @param {"up"|"down"} verticalDirection 
