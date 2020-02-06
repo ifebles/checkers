@@ -96,6 +96,15 @@ module.exports = {
       });
   },
 
+  setSpecialStartingPosition: function (board, player, custom) {
+    if (!Array.isArray(custom))
+      return this.setPlayerStartingPosition(board, player, custom);
+
+    custom.forEach(f => {
+      board[f[0]][f[1]] = player;
+    });
+  },
+
   /**
    * Print welcome message
    */
@@ -147,6 +156,9 @@ module.exports = {
    * 
    */
   positionTranslator: function (positions) {
+    // if (!positions)
+    //   return null;
+
     if (Array.isArray(positions[0]))
       return positions.map(m => [rowReference[m[0]], columnReference[m[1]]]);
 
@@ -226,7 +238,7 @@ module.exports = {
 
       entries.forEach(entry => {
         if (board[entry[0]][entry[1]] === oponentPlayer)
-          this.calculateJumps(board, oponentPlayer, entry, direction)
+          this.calculateJumps(board, oponentPlayer, entry, direction, entry[1] > piece[1] ? 'right' : 'left')
             .forEach(r => result.push(r));
         else
           result.push({ coordinate: entry, killedPieces: [] });
@@ -245,11 +257,12 @@ module.exports = {
    * @param {number[][]} board 
    * @param {string} oponentPlayer 
    * @param {number[]} position 
-   * @param {"up"|"down"} direction 
+   * @param {"up"|"down"} verticalDirection 
+   * @param {"right"|"left"|"both"} hDirection 
    * @param {number[][]} killedPieces 
    * @returns {{coordinate: number[], killedPieces: number[][]}[]}
    */
-  calculateJumps: function (board, oponentPlayer, currentPosition, direction, killedPieces = []) {
+  calculateJumps: function (board, oponentPlayer, currentPosition, vDirection, hDirection = 'both', killedPieces = []) {
     const result = [];
     const killed = [...killedPieces];
     const currentLocation = board[currentPosition[0]][currentPosition[1]];
@@ -257,21 +270,32 @@ module.exports = {
     if (!currentLocation || currentLocation.toLowerCase() !== oponentPlayer)
       return [];
 
-    const left = this.getLocation(currentPosition, direction, 'left');
-    const right = this.getLocation(currentPosition, direction, 'right');
+    const direction = {
+      left: null,
+      right: null,
+    };
 
-    [left, right].forEach(f => {
-      if (board[f[0]][f[1]] !== emptyCellChar)
+    if (hDirection === 'both') {
+      direction.left = this.getLocation(currentPosition, vDirection, 'left');
+      direction.right = this.getLocation(currentPosition, vDirection, 'right');
+    }
+    else
+      direction[hDirection] = this.getLocation(currentPosition, vDirection, hDirection);
+
+    // console.log(direction)
+
+    Object.values(direction).forEach(f => {
+      if (!f || board[f[0]][f[1]] !== emptyCellChar)
         return;
 
       killed.push(currentPosition);
       result.push({ coordinate: f, killedPieces: killed });
 
-      const adyacent = this.getAdyacentPositions(board, oponentPlayer, f, direction);
-      (adyacent[direction] || []).forEach(option => {
-        this.calculateJumps(board, oponentPlayer, option, direction, killed)
+      const adyacent = this.getAdyacentPositions(board, oponentPlayer, f, vDirection);
+      (adyacent[vDirection] || []).forEach(option => {
+        this.calculateJumps(board, oponentPlayer, option, vDirection, undefined, killed)
           .forEach(entry => {
-            result.push(entry.coordinate);
+            result.push(entry);
           });
       });
     });
@@ -316,6 +340,7 @@ module.exports = {
     console.log();
     console.log('- To move a piece, select the specified option number for the playable fields');
     console.log('- To go back in the menu, input the option 0');
+    console.log('- The uppercase symbols (e.g. "X", "O") represent king pieces');
     console.log('- To exit, press Ctrl + C');
     console.log('- To print the board again, type board');
     console.log('- To print this help again, type "help"');
@@ -331,7 +356,10 @@ module.exports = {
     let turnCounter = 0;
     let currentTurn = 'x';
 
-    playerChars.forEach((f, i) => this.setPlayerStartingPosition(board, f, i === 0));
+    this.setSpecialStartingPosition(board, 'o', [[0, 1], [0, 3], [0, 5], [0, 7], [1, 2], [1, 4], [1, 6], [2, 3], [2, 5], [2, 7], [3, 0], [5, 0]]);
+    this.setSpecialStartingPosition(board, 'x', [[3, 4], [4, 7], [5, 4], [5, 6], [6, 1], [6, 3], [6, 7], [7, 0], [7, 2], [7, 4], [7, 6]]);
+    // playerChars.forEach((f, i) => this.setPlayerStartingPosition(board, f, i === 0));
+
     this.printBoard(board);
     this.printHelp();
 
@@ -369,12 +397,11 @@ module.exports = {
         }));
 
         console.log('0) go back');
-        optionsLocation.forEach((f, i) =>
-          console.log(
-            `${i + 1}) ${f.coordinate[1]}${f.coordinate[0]}${
-            f.killedPieces.length ?
-              ` // Pieces killed: ${f.killedPieces.map(m => m[1] + m[0]).join(', ')}` :
-              ''}`));
+        optionsLocation.forEach((f, i) => console.log(
+          `${i + 1}) ${f.coordinate[1]}${f.coordinate[0]}${
+          f.killedPieces.length ?
+            ` // Pieces killed: ${f.killedPieces.map(m => m[1] + m[0]).join(', ')}` :
+            ''}`));
 
         inputMovement = '';
         while (!inputMovement) {
