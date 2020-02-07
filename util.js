@@ -278,7 +278,7 @@ module.exports = {
     const oponentPlayer = playerChars.find(f => player !== f);
     const pieceStatus = board[piece[0]][piece[1]] === player.toUpperCase() ? 'king' : 'normal';
 
-    const possibleLocations = this.getAdyacentPositions(board, oponentPlayer, piece, pieceStatus === 'king' ? null : startsTop ? 'down' : 'up');
+    const possibleLocations = this.getAdyacentPositions(board, oponentPlayer, piece, pieceStatus === 'king' ? 'both' : startsTop ? 'down' : 'up');
 
     Object.entries(possibleLocations).forEach(f => {
       const direction = f[0];
