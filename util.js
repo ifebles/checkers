@@ -330,11 +330,18 @@ module.exports = {
 
     switch (orientation.v) {
       case 'both':
-        direction.up.left = this.getLocation(currentPosition, 'up', 'left');
-        direction.up.right = this.getLocation(currentPosition, 'up', 'right');
+        if (orientation.h === 'both') {
+          direction.up.left = this.getLocation(currentPosition, 'up', 'left');
+          direction.up.right = this.getLocation(currentPosition, 'up', 'right');
 
-        direction.down.left = this.getLocation(currentPosition, 'down', 'left');
-        direction.down.right = this.getLocation(currentPosition, 'down', 'right');
+          direction.down.left = this.getLocation(currentPosition, 'down', 'left');
+          direction.down.right = this.getLocation(currentPosition, 'down', 'right');
+        }
+        else {
+          direction.up[orientation.h] = this.getLocation(currentPosition, 'up', orientation.h);
+          direction.down[orientation.h] = this.getLocation(currentPosition, 'down', orientation.h);
+        }
+
         break;
 
       default:
@@ -478,6 +485,8 @@ module.exports = {
 
   /**
    * Start the game
+   * @param {string?} boardStr 
+   * @param {number?} playCount 
    */
   startGame: async function (boardStr = null, playCount = 0) {
     const parsedBoard = this.transformVisualBoard(boardStr);
@@ -556,7 +565,7 @@ module.exports = {
           killedPieces: this.positionTranslator(m.killedPieces) || [],
         }));
 
-        console.log('Select a place play into:');
+        console.log('Select a place to play into:');
         console.log('0) go back');
         optionsLocation.forEach((f, i) => console.log(
           `${i + 1}) ${f.coordinate[1]}${f.coordinate[0]}${
