@@ -30,6 +30,7 @@ module.exports = {
 
   /**
    * Manage user input
+   * @param {string} prompt 
    */
   promptUser: function (prompt = '> ') {
     return new Promise(resolve => {
@@ -42,6 +43,10 @@ module.exports = {
     })
   },
 
+  /**
+   * Handle special commands while prompting
+   * @param {string[][]} board 
+   */
   manageSpecialPrompts: function (board) {
     return async prompt => {
       let response = '';
@@ -71,6 +76,7 @@ module.exports = {
 
   /**
    * Board depiction
+   * @param {string[][]} board 
    */
   printBoard: function (board) {
     console.log();
@@ -87,6 +93,9 @@ module.exports = {
 
   /**
    * Set the starting position to the specified player
+   * @param {string[][]} board 
+   * @param {string} player 
+   * @param {boolean} startsTop 
    */
   setPlayerStartingPosition: function (board, player, startsTop) {
     board
@@ -98,6 +107,12 @@ module.exports = {
       });
   },
 
+  /**
+   * Set the specified starting position to the specified player
+   * @param {string[][]} board 
+   * @param {string} player 
+   * @param {number[][]|boolean} custom 
+   */
   setSpecialStartingPosition: function (board, player, custom) {
     if (!Array.isArray(custom))
       return this.setPlayerStartingPosition(board, player, custom);
@@ -140,8 +155,10 @@ module.exports = {
   },
 
   /**
-   * 
-  */
+   * Find all the pieces for the specified player
+   * @param {string[][]} board 
+   * @param {string} player 
+   */
   locatePieces: function (board, player) {
     const pieceLocations = [];
     board.forEach((rowItem, rowIndex) => {
@@ -155,18 +172,23 @@ module.exports = {
   },
 
   /**
-   * 
+   * Translate positions from index to a visual representation
+   * @param {number[]|number[][]} positions 
    */
   positionTranslator: function (positions) {
-    // if (!positions)
-    //   return null;
-
     if (Array.isArray(positions[0]))
       return positions.map(m => [rowReference[m[0]], columnReference[m[1]]]);
 
     return positions.length ? [rowReference[positions[0]], columnReference[positions[1]]] : null;
   },
 
+  /**
+   * Get the adyacent tiles of the specified board
+   * @param {string[][]} board 
+   * @param {string} oponentPlayer 
+   * @param {number[]} piece 
+   * @param {null|"up"|"down"} direction 
+   */
   getAdyacentPositions: function (board, oponentPlayer, piece, direction = null) {
     const upMovements = [
       // Left place
@@ -217,7 +239,7 @@ module.exports = {
   },
 
   /**
-   * 
+   * Get all the possible movements from the specified piece
    * @param {string[][]} board 
    * @param {string} player 
    * @param {number[]} piece 
@@ -251,7 +273,7 @@ module.exports = {
   },
 
   /**
-   * 
+   * Get the possible jumps from the given starting point
    * @param {string[][]} board 
    * @param {string} oponentPlayer 
    * @param {number[]} position 
@@ -280,8 +302,6 @@ module.exports = {
     else
       direction[hDirection] = this.getLocation(currentPosition, vDirection, hDirection);
 
-    // console.log(direction)
-
     Object.values(direction).forEach(f => {
       if (!f || board[f[0]][f[1]] !== emptyCellChar)
         return;
@@ -299,14 +319,14 @@ module.exports = {
     });
 
     return result;
-    // .reduce((o, e) => {
-    //   if (!o.find(f => f[0] === e[0] && f[1] === e[1]))
-    //     o.push(e);
-
-    //   return o;
-    // }, []);
   },
 
+  /**
+   * Get the location from the specified point in the specified direction
+   * @param {number[]} piece 
+   * @param {"up"|"down"} verticicalPosition 
+   * @param {"right"|"left"} horizontalPosition 
+   */
   getLocation: function (piece, verticicalPosition, horizontalPosition) {
     const tempResult = [];
 
@@ -339,14 +359,14 @@ module.exports = {
     console.log('- To move a piece, select the specified option number for the playable fields');
     console.log('- To go back in the menu, type "0"');
     console.log('- The uppercase symbols (e.g. "X", "O") represent KING pieces');
-    console.log('- To exit, press Ctrl + C');
+    console.log('- To exit, press `Ctrl + C`');
     console.log('- To print the board again, type "board"');
     console.log('- To print this help again, type "help"');
     console.log();
   },
 
   /**
-   * 
+   * Get the game status
    * @param {string[][]} board 
    * @param {{symbol: string, startsTop: boolean}} currentPlayer 
    */
