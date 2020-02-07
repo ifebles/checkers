@@ -248,10 +248,6 @@ module.exports = {
     });
 
     return result;
-    // console.log((upMovements));
-    // console.log(this.positionTranslator(upMovements));
-    // console.log(this.positionTranslator(downMovements));
-    // console.log((downMovements));
   },
 
   /**
@@ -350,6 +346,66 @@ module.exports = {
   },
 
   /**
+   * 
+   * @param {string[][]} board 
+   * @param {{symbol: string, startsTop: boolean}} currentPlayer 
+   */
+  getGameStatus: function (board, currentPlayer) {
+    const status = {
+      result: 'waiting',
+      winner: null,
+    };
+
+    const playerPieces = {
+      [this.normalPlayerChars.O]: this.locatePieces(board, this.normalPlayerChars.O),
+      [this.normalPlayerChars.X]: this.locatePieces(board, this.normalPlayerChars.X),
+    };
+
+    if (!playerPieces.o.length) {
+      status.result = 'finished';
+      status.winner = this.normalPlayerChars.X;
+      return status;
+    }
+
+    if (!playerPieces.x.length) {
+      status.result = 'finished';
+      status.winner = this.normalPlayerChars.O;
+      return status;
+    }
+
+    let validMovements = false;
+    for (const a of playerPieces[currentPlayer.symbol]) {
+      const movements = this.calculateMovement(board, currentPlayer.symbol, a, currentPlayer.startsTop);
+      if (validMovements = !!movements.length)
+        break;
+    }
+
+    // Since the player cannot move:
+    if (!validMovements) {
+      let oponentCanMove = false;
+      const oponentSymbol = playerChars.find(f => f !== currentPlayer.symbol);
+      for (const a of playerPieces[oponentSymbol]) {
+        const movements = this.calculateMovement(board, oponentSymbol, a, !currentPlayer.startsTop);
+        if (oponentCanMove = !!movements.length)
+          break;
+      }
+
+      // Since the oponent have available moves:
+      if (oponentCanMove) {
+        status.result = 'finished';
+        status.winner = oponentSymbol;
+        return status;
+      }
+
+      // Since no one can move:
+      status.result = 'tied';
+      return status;
+    }
+
+    return status;
+  },
+
+  /**
    * Start the game
    */
   startGame: async function () {
@@ -358,17 +414,38 @@ module.exports = {
     let turnCounter = 0;
     let currentTurn = 'x';
 
-    this.setSpecialStartingPosition(board, 'o', [[0, 1], [0, 3], [0, 5], [0, 7], [1, 2], [1, 4], [1, 6], [2, 3], [2, 7], [4, 1], [5, 0], [6, 5]]);
+    // this.setSpecialStartingPosition(board, 'o', [[0, 1], [0, 3], [0, 5], [0, 7], [1, 2], [1, 4], [1, 6], [2, 3], [2, 7], [4, 1], [5, 0], [6, 5]]);
     // this.setSpecialStartingPosition(board, 'o', [[0, 1], [0, 3], [0, 5], [0, 7], [1, 2], [1, 4], [1, 6], [2, 3], [2, 5], [2, 7], [3, 0], [5, 0]]);
-    this.setSpecialStartingPosition(board, 'x', [[3, 4], [5, 4], [5, 6], [6, 1], [6, 3], [6, 7], [7, 0], [7, 2], [7, 4]]);
+    // this.setSpecialStartingPosition(board, 'x', [[3, 4], [5, 4], [5, 6], [6, 1], [6, 3], [6, 7], [7, 0], [7, 2], [7, 4]]);
     // this.setSpecialStartingPosition(board, 'x', [[3, 4], [4, 7], [5, 4], [5, 6], [6, 1], [6, 3], [6, 7], [7, 0], [7, 2], [7, 4], [7, 6]]);
-    // playerChars.forEach((f, i) => this.setPlayerStartingPosition(board, f, i === 0));
+    playerChars.forEach((f, i) => this.setPlayerStartingPosition(board, f, i === 0));
 
     this.printBoard(board);
     this.printHelp();
 
     while (true) {
       const startsTop = playerChars[0] === currentTurn;
+
+      const gameStatus = this.getGameStatus(board, { symbol: currentTurn, startsTop });
+
+      if (gameStatus.result !== 'waiting') {
+        switch (gameStatus.result) {
+          case 'finished':
+            console.log();
+            console.log(`* The WINNER is "${gameStatus.winner}" !! *`)
+            console.log();
+            break;
+
+          case "tied":
+            console.log();
+            console.log('* The game is TIED !! *')
+            console.log();
+            break;
+        }
+
+        break;
+      }
+
       turnCounter++;
       console.log(`- Player "${currentTurn}" | turn ${Math.ceil(turnCounter / 2)} -`);
 
@@ -443,6 +520,23 @@ module.exports = {
 
       this.printBoard(board);
       currentTurn = playerChars[(turnCounter - 1) % 2];
+    }
+
+    let restartPrompt = '';
+    while (!response) {
+      restartPrompt = await customPrompt('Do you want to play again? (y/n)');
+
+      switch (restartPrompt.toLowerCase()) {
+        case 'y':
+        case 'n':
+          this.changePlayerOrder();
+          this.startGame();
+          break;
+
+        default:
+          restartPrompt = '';
+          break;
+      }
     }
   },
 };
