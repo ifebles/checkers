@@ -22,6 +22,7 @@ module.exports = {
   },
   /**
    * New board
+   * @returns {string[][]}
    */
   getEmptyBoard: function () {
     return [...emptyArray]
@@ -31,6 +32,7 @@ module.exports = {
   /**
    * Manage user input
    * @param {string} prompt 
+   * @returns {Promise<string>}
    */
   promptUser: function (prompt = '> ') {
     return new Promise(resolve => {
@@ -46,6 +48,7 @@ module.exports = {
   /**
    * Handle special commands while prompting
    * @param {string[][]} board 
+   * @returns {(prompt: string) => Promise<string>}
    */
   manageSpecialPrompts: function (board) {
     return async prompt => {
@@ -174,6 +177,7 @@ module.exports = {
   /**
    * Translate positions from index to a visual representation
    * @param {number[]|number[][]} positions 
+   * @returns {null|string[][]|string[]}
    */
   positionTranslator: function (positions) {
     if (Array.isArray(positions[0]))
@@ -356,7 +360,7 @@ module.exports = {
     console.log();
     console.log('* HELP *');
     console.log();
-    console.log('- To move a piece, select the specified option number for the playable fields');
+    console.log('- To move a piece, select the specified option number for the playable fields or input the field name');
     console.log('- To go back in the menu, type "0"');
     console.log('- The uppercase symbols (e.g. "X", "O") represent KING pieces');
     console.log('- To exit, press `Ctrl + C`');
@@ -477,10 +481,20 @@ module.exports = {
       while (inputMovement === '0') {
         let inputPiece = '';
         console.log();
+        console.log('Select a piece to play:');
         piecesLocation.forEach((f, i) => console.log(`${i + 1}) ${f[1]}${f[0]}`));
 
         while (!inputPiece) {
           inputPiece = await customPrompt();
+
+          if (inputPiece.length === 2 && inputPiece.match(/^[a-h][1-8]$/i)) {
+            const letter = inputPiece[0].toUpperCase();
+            const number = inputPiece.substr(1);
+            const inxResult = piecesLocation.findIndex(f => f[0] === number && f[1] === letter);
+
+            if (inxResult > -1)
+              inputPiece = `${inxResult + 1}`;
+          }
 
           if (isNaN(inputPiece)
             || +inputPiece - 1 < 0 ||
@@ -497,6 +511,7 @@ module.exports = {
           killedPieces: this.positionTranslator(m.killedPieces) || [],
         }));
 
+        console.log('Select a place play into:');
         console.log('0) go back');
         optionsLocation.forEach((f, i) => console.log(
           `${i + 1}) ${f.coordinate[1]}${f.coordinate[0]}${
@@ -510,6 +525,15 @@ module.exports = {
 
           if (inputMovement === '0')
             continue;
+
+          if (inputMovement.length === 2 && inputMovement.match(/^[a-h][1-8]$/i)) {
+            const letter = inputMovement[0].toUpperCase();
+            const number = inputMovement.substr(1);
+            const inxResult = optionsLocation.findIndex(f => f.coordinate[0] === number && f.coordinate[1] === letter);
+
+            if (inxResult > -1)
+              inputMovement = `${inxResult + 1}`;
+          }
 
           if (isNaN(inputMovement)
             || +inputMovement - 1 < 0 ||
