@@ -30,6 +30,28 @@ module.exports = {
   },
 
   /**
+   * Convert a graphical board to an object
+   * @param {string} board 
+   */
+  transformVisualBoard: function (board) {
+    if (!board)
+      return;
+
+    const parsedBoard = board.split('\n')
+      .map(m => m.trim().split('|').slice(1, 9).map(m => m.trim()))
+      .filter(f => f.length === 8);
+
+    if (parsedBoard.length !== 8) {
+      console.log();
+      console.warn('Failed to load custom board...');
+      console.log();
+      return;
+    }
+
+    return parsedBoard;
+  },
+
+  /**
    * Manage user input
    * @param {string} prompt 
    * @returns {Promise<string>}
@@ -432,17 +454,15 @@ module.exports = {
   /**
    * Start the game
    */
-  startGame: async function () {
-    const board = this.getEmptyBoard();
+  startGame: async function (boardStr = null, playCount = 0) {
+    const parsedBoard = this.transformVisualBoard(boardStr);
+    const board = parsedBoard || this.getEmptyBoard();
     const customPrompt = this.manageSpecialPrompts(board);
-    let turnCounter = 0;
-    let currentTurn = 'x';
+    let turnCounter = playCount || 0;
+    let currentTurn = playCount ? playerChars[(turnCounter - 1) % 2] : 'x';
 
-    // this.setSpecialStartingPosition(board, 'o', [[0, 1], [0, 3], [0, 5], [0, 7], [1, 2], [1, 4], [1, 6], [2, 3], [2, 7], [4, 1], [5, 0], [6, 5]]);
-    // this.setSpecialStartingPosition(board, 'o', [[0, 1], [0, 3], [0, 5], [0, 7], [1, 2], [1, 4], [1, 6], [2, 3], [2, 5], [2, 7], [3, 0], [5, 0]]);
-    // this.setSpecialStartingPosition(board, 'x', [[3, 4], [5, 4], [5, 6], [6, 1], [6, 3], [6, 7], [7, 0], [7, 2], [7, 4]]);
-    // this.setSpecialStartingPosition(board, 'x', [[3, 4], [4, 7], [5, 4], [5, 6], [6, 1], [6, 3], [6, 7], [7, 0], [7, 2], [7, 4], [7, 6]]);
-    playerChars.forEach((f, i) => this.setPlayerStartingPosition(board, f, i === 0));
+    if (!parsedBoard)
+      playerChars.forEach((f, i) => this.setPlayerStartingPosition(board, f, i === 0));
 
     this.printBoard(board);
     this.printHelp();
