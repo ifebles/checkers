@@ -183,6 +183,7 @@ module.exports = {
    * Find all the pieces for the specified player
    * @param {string[][]} board 
    * @param {string} player 
+   * @returns {number[][]}
    */
   locatePieces: function (board, player) {
     const pieceLocations = [];
@@ -214,7 +215,7 @@ module.exports = {
    * @param {string} oponentPlayer 
    * @param {number[]} piece 
    * @param {"up"|"down"|"both"} direction 
-   * @returns {{up: number[][], down: number[][]}}
+   * @returns {{up?: number[][], down?: number[][]}}
    */
   getAdyacentPositions: function (board, oponentPlayer, piece, direction = 'both') {
     const upMovements = [
@@ -429,6 +430,7 @@ module.exports = {
    * @param {{symbol: string, startsTop: boolean}} currentPlayer 
    */
   getGameStatus: function (board, currentPlayer) {
+    const oponentSymbol = playerChars.find(f => f !== currentPlayer.symbol);
     const status = {
       result: 'waiting',
       winner: null,
@@ -461,7 +463,6 @@ module.exports = {
     // Since the player cannot move:
     if (!validMovements) {
       let oponentCanMove = false;
-      const oponentSymbol = playerChars.find(f => f !== currentPlayer.symbol);
       for (const a of playerPieces[oponentSymbol]) {
         const movements = this.calculateMovement(board, oponentSymbol, a, !currentPlayer.startsTop);
         if (oponentCanMove = !!movements.length)
@@ -621,20 +622,28 @@ module.exports = {
     }
 
     let restartPrompt = '';
-    while (!response) {
-      restartPrompt = await customPrompt('Do you want to play again? (y/n)');
+    while (!restartPrompt) {
+      restartPrompt = await customPrompt('Do you want to play again? (y/n) ');
 
       switch (restartPrompt.toLowerCase()) {
         case 'y':
         case 'n':
-          this.changePlayerOrder();
-          this.startGame();
           break;
 
         default:
           restartPrompt = '';
           break;
       }
+    }
+
+    if (restartPrompt.toLowerCase() === 'y') {
+      this.changePlayerOrder();
+      this.startGame();
+    }
+    else {
+      console.log();
+      console.log('See you next time!');
+      return process.exit(0);
     }
   },
 };
