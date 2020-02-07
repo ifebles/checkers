@@ -213,9 +213,10 @@ module.exports = {
    * @param {string[][]} board 
    * @param {string} oponentPlayer 
    * @param {number[]} piece 
-   * @param {null|"up"|"down"} direction 
+   * @param {"up"|"down"|"both"} direction 
+   * @returns {{up: number[][], down: number[][]}}
    */
-  getAdyacentPositions: function (board, oponentPlayer, piece, direction = null) {
+  getAdyacentPositions: function (board, oponentPlayer, piece, direction = 'both') {
     const upMovements = [
       // Left place
       [emptyCellChar, oponentPlayer].includes(
@@ -250,7 +251,7 @@ module.exports = {
       down: null,
     };
 
-    if (!direction) {
+    if (direction === 'both') {
       possibleLocations.down = downMovements;
       possibleLocations.up = upMovements;
     }
@@ -288,7 +289,7 @@ module.exports = {
 
       entries.forEach(entry => {
         if (`${board[entry[0]][entry[1]]}`.toLowerCase() === oponentPlayer)
-          this.calculateJumps(board, oponentPlayer, entry, direction, entry[1] > piece[1] ? 'right' : 'left')
+          this.calculateJumps(board, oponentPlayer, entry, pieceStatus === 'king', { v: direction, h: entry[1] > piece[1] ? 'right' : 'left' })
             .forEach(r => result.push(r));
         else
           result.push({ coordinate: entry, killedPieces: [] });
@@ -303,12 +304,12 @@ module.exports = {
    * @param {string[][]} board 
    * @param {string} oponentPlayer 
    * @param {number[]} position 
-   * @param {"up"|"down"} verticalDirection 
-   * @param {"right"|"left"|"both"} hDirection 
+   * @param {boolean} playerPieceIsKing 
+   * @param {{v: "up"|"down"|"both", h: "right"|"left"|"both"}} orientation 
    * @param {number[][]} killedPieces 
    * @returns {{coordinate: number[], killedPieces: number[][]}[]}
    */
-  calculateJumps: function (board, oponentPlayer, currentPosition, vDirection, hDirection = 'both', killedPieces = []) {
+  calculateJumps: function (board, oponentPlayer, currentPosition, playerPieceIsKing, orientation = { v: 'both', h: 'both' }, killedPieces = []) {
     const result = [];
     const killed = [...killedPieces];
     const currentLocation = board[currentPosition[0]][currentPosition[1]];
@@ -317,32 +318,56 @@ module.exports = {
       return [];
 
     const direction = {
-      left: null,
-      right: null,
+      up: {
+        left: null,
+        right: null,
+      },
+      down: {
+        left: null,
+        right: null,
+      },
     };
 
-    if (hDirection === 'both') {
-      direction.left = this.getLocation(currentPosition, vDirection, 'left');
-      direction.right = this.getLocation(currentPosition, vDirection, 'right');
+    switch (orientation.v) {
+      case 'both':
+        direction.up.left = this.getLocation(currentPosition, 'up', 'left');
+        direction.up.right = this.getLocation(currentPosition, 'up', 'right');
+
+        direction.down.left = this.getLocation(currentPosition, 'down', 'left');
+        direction.down.right = this.getLocation(currentPosition, 'down', 'right');
+        break;
+
+      default:
+        if (orientation.h === 'both') {
+          direction[orientation.v].left = this.getLocation(currentPosition, orientation.v, 'left');
+          direction[orientation.v].right = this.getLocation(currentPosition, orientation.v, 'right');
+        }
+        else
+          direction[orientation.v][orientation.h] = this.getLocation(currentPosition, orientation.v, orientation.h);
+        break;
     }
-    else
-      direction[hDirection] = this.getLocation(currentPosition, vDirection, hDirection);
 
-    Object.values(direction).forEach(f => {
-      if (!f || board[f[0]][f[1]] !== emptyCellChar)
-        return;
+    for (const vDir in direction)
+      for (const hDir in direction[vDir]) {
+        const location = direction[vDir][hDir];
 
-      killed.push(currentPosition);
-      result.push({ coordinate: f, killedPieces: killed });
+        if (!location || board[location[0]][location[1]] !== emptyCellChar)
+          continue;
 
-      const adyacent = this.getAdyacentPositions(board, oponentPlayer, f, vDirection);
-      (adyacent[vDirection] || []).forEach(option => {
-        this.calculateJumps(board, oponentPlayer, option, vDirection, undefined, killed)
-          .forEach(entry => {
-            result.push(entry);
+        killed.push(currentPosition);
+        result.push({ coordinate: location, killedPieces: killed });
+
+        const adyacent = this.getAdyacentPositions(board, oponentPlayer, location, playerPieceIsKing ? 'both' : vDir);
+        (adyacent[vDir] || [])
+          .filter(f => !killed.find(e => e[0] === f[0] && e[1] === f[1]))
+          .forEach(option => {
+            // this.calculateJumps(board, oponentPlayer, option, playerPieceIsKing, { v: playerPieceIsKing ? 'both': vDir, h: option[1] > location[1] ? 'right' : 'left' }, killed)
+            this.calculateJumps(board, oponentPlayer, option, playerPieceIsKing, { v: vDir, h: option[1] > location[1] ? 'right' : 'left' }, killed)
+              .forEach(entry => {
+                result.push(entry);
+              });
           });
-      });
-    });
+      }
 
     return result;
   },
