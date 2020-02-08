@@ -1,4 +1,5 @@
 const inputHandler = require("./input");
+const painter = require("./painter");
 
 
 const emptyCellChar = '-';
@@ -16,6 +17,7 @@ module.exports = {
     O: 'o',
     X: 'x',
   },
+
   /**
    * New board
    * @returns {string[][]}
@@ -62,23 +64,6 @@ module.exports = {
   changePlayerOrder: function () { return playerChars.reverse() },
 
   /**
-   * Board depiction
-   * @param {string[][]} board 
-   */
-  printBoard: function (board) {
-    console.log();
-    console.log('  ', ...columnReference.map(m => ` ${m} `));
-
-    board.forEach((f, i) => {
-      console.log(rowReference[i], ...f.map(m => `| ${m}`), '|', rowReference[i]);
-    });
-
-    console.log('  ', ...columnReference.map(m => ` ${m} `));
-
-    console.log();
-  },
-
-  /**
    * Set the starting position to the specified player
    * @param {string[][]} board 
    * @param {string} player 
@@ -110,35 +95,32 @@ module.exports = {
   },
 
   /**
-   * Print welcome message
+   * Setup the starting point for the game
+   * @param {() => Promise<boolean>} action 
    */
-  printWelcomeMessage: async function () {
-    console.log();
-    console.log('Welcome to a new game of * CHECKER *');
-    console.log();
-    console.log('- Player 1 (x) will always move first');
-    console.log('- Each time a new game starts, the starting position shuffles');
-    console.log();
-    console.log();
+  welcomeMessage: function (action) {
+    const postWelcomeAction = action || (async () => {
+      let response = '';
 
-    let response = '';
+      while (!response) {
+        response = await inputHandler.promptUser('Ready to start? (y/n) ');
 
-    while (!response) {
-      response = await inputHandler.promptUser('Ready to start? (y/n) ');
+        switch (response.toLowerCase()) {
+          case 'y':
+          case 'n':
+            response = response.toLowerCase();
+            break;
 
-      switch (response.toLowerCase()) {
-        case 'y':
-        case 'n':
-          response = response.toLowerCase();
-          break;
-
-        default:
-          response = '';
-          break;
+          default:
+            response = '';
+            break;
+        }
       }
-    }
 
-    return response === 'y';
+      return response === 'y';
+    });
+
+    return painter.printWelcomeMessage(postWelcomeAction);
   },
 
   /**
@@ -376,22 +358,6 @@ module.exports = {
   },
 
   /**
-   * Print help
-   */
-  printHelp: function () {
-    console.log();
-    console.log('* HELP *');
-    console.log();
-    console.log('- To move a piece, select the specified option number for the playable fields or input the field name');
-    console.log('- To go back in the menu, type "0"');
-    console.log('- The uppercase symbols (e.g. "X", "O") represent KING pieces');
-    console.log('- To exit, press `Ctrl + C`');
-    console.log('- To print the board again, type "board"');
-    console.log('- To print this help again, type "help"');
-    console.log();
-  },
-
-  /**
    * Get the game status
    * @param {string[][]} board 
    * @param {{symbol: string, startsTop: boolean}} currentPlayer 
@@ -459,15 +425,15 @@ module.exports = {
   startGame: async function (boardStr = null, playCount = 0) {
     const parsedBoard = this.transformVisualBoard(boardStr);
     const board = parsedBoard || this.getEmptyBoard();
-    const customPrompt = inputHandler.manageSpecialPrompts(this, board);
+    const customPrompt = inputHandler.manageSpecialPrompts(painter, { board, columnReference, rowReference });
     let turnCounter = playCount || 0;
     let currentTurn = playCount ? playerChars[(turnCounter - 1) % 2] : 'x';
 
     if (!parsedBoard)
       playerChars.forEach((f, i) => this.setPlayerStartingPosition(board, f, i === 0));
 
-    this.printBoard(board);
-    this.printHelp();
+    painter.printBoard({ board, columnReference, rowReference });
+    painter.printHelp();
 
     while (true) {
       const startsTop = playerChars[0] === currentTurn;
@@ -584,7 +550,7 @@ module.exports = {
           board[selectedDestination.coordinate[0]][selectedDestination.coordinate[1]] = movingPiece.toUpperCase();
       }
 
-      this.printBoard(board);
+      painter.printBoard({ board, columnReference, rowReference });
       currentTurn = playerChars[(turnCounter - 1) % 2];
     }
 

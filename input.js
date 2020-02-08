@@ -3,7 +3,7 @@ const readline = require("readline");
 
 const specialCommands = {
   help: context => context.printHelp(),
-  board: (context, board) => context.printBoard(board),
+  board: (context, params) => context.printBoard(params),
 };
 
 module.exports = {
@@ -25,10 +25,11 @@ module.exports = {
 
   /**
    * Handle special commands while prompting
-   * @param {string[][]} board 
+   * @param {Function} context 
+   * @param {{}} params 
    * @returns {(prompt: string) => Promise<string>}
    */
-  manageSpecialPrompts: function (context, board) {
+  manageSpecialPrompts: function (context, params = {}) {
     return async prompt => {
       let response = '';
 
@@ -36,7 +37,7 @@ module.exports = {
         response = await this.promptUser(prompt);
 
         if (specialCommands[response]) {
-          specialCommands[response](context, board);
+          specialCommands[response](context, params);
           response = '';
         }
       }
