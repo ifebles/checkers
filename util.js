@@ -41,7 +41,11 @@ module.exports = {
       .map(m => m.trim().split('|').slice(1, 9).map(m => m.trim()))
       .filter(f => f.length === 8);
 
-    if (parsedBoard.length !== 8) {
+    const failedParsing = parsedBoard.length !== 8
+      || parsedBoard.some(s => s.some(cell => ![emptyCellChar, this.normalPlayerChars.X, this.normalPlayerChars.O].includes(cell.toLowerCase())))
+      || parsedBoard.every(e => e.every(cell => cell === emptyCellChar));
+
+    if (failedParsing) {
       console.log();
       console.warn('Failed to load custom board...');
       console.log();
@@ -155,7 +159,7 @@ module.exports = {
     console.log('Welcome to a new game of * CHECKER *');
     console.log();
     console.log('- Player 1 (x) will always move first');
-    console.log('- Each time a new game starts, the starting position shuflles');
+    console.log('- Each time a new game starts, the starting position shuffles');
     console.log();
     console.log();
 
@@ -366,15 +370,20 @@ module.exports = {
         result.push({ coordinate: location, killedPieces: killed });
 
         const adyacent = this.getAdyacentPositions(board, oponentPlayer, location, playerPieceIsKing ? 'both' : vDir);
-        (adyacent[vDir] || [])
-          .filter(f => !killed.find(e => e[0] === f[0] && e[1] === f[1]))
-          .forEach(option => {
-            // this.calculateJumps(board, oponentPlayer, option, playerPieceIsKing, { v: playerPieceIsKing ? 'both': vDir, h: option[1] > location[1] ? 'right' : 'left' }, killed)
-            this.calculateJumps(board, oponentPlayer, option, playerPieceIsKing, { v: vDir, h: option[1] > location[1] ? 'right' : 'left' }, killed)
-              .forEach(entry => {
-                result.push(entry);
-              });
-          });
+
+        Object.entries(adyacent).forEach(entry => {
+          const relatedVerticalDir = entry[0];
+          const adyacentList = entry[1] || [];
+
+          adyacentList
+            .filter(f => !killed.find(e => e[0] === f[0] && e[1] === f[1]))
+            .forEach(position => {
+              this.calculateJumps(board, oponentPlayer, position, playerPieceIsKing, { v: relatedVerticalDir, h: position[1] > location[1] ? 'right' : 'left' }, killed)
+                .forEach(movement => {
+                  result.push(movement);
+                });
+            });
+        });
       }
 
     return result;
