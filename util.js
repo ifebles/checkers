@@ -1,4 +1,4 @@
-const readline = require("readline");
+const inputHandler = require("./input");
 
 
 const emptyCellChar = '-';
@@ -6,10 +6,6 @@ const emptyArray = [, , , , , , , ,];
 const columnReference = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
 const rowReference = ['1', '2', '3', '4', '5', '6', '7', '8'];
 const playerChars = ['o', 'x'];
-const specialCommands = {
-  help: context => context.printHelp(),
-  board: (context, board) => context.printBoard(board),
-};
 
 
 module.exports = {
@@ -53,44 +49,6 @@ module.exports = {
     }
 
     return parsedBoard;
-  },
-
-  /**
-   * Manage user input
-   * @param {string} prompt 
-   * @returns {Promise<string>}
-   */
-  promptUser: function (prompt = '> ') {
-    return new Promise(resolve => {
-      const rl = readline.createInterface(process.stdin, process.stdout);
-
-      rl.question(prompt, resp => {
-        resolve(resp);
-        rl.close();
-      });
-    })
-  },
-
-  /**
-   * Handle special commands while prompting
-   * @param {string[][]} board 
-   * @returns {(prompt: string) => Promise<string>}
-   */
-  manageSpecialPrompts: function (board) {
-    return async prompt => {
-      let response = '';
-
-      while (!response) {
-        response = await this.promptUser(prompt);
-
-        if (specialCommands[response]) {
-          specialCommands[response](this, board);
-          response = '';
-        }
-      }
-
-      return response;
-    };
   },
 
   /**
@@ -166,7 +124,7 @@ module.exports = {
     let response = '';
 
     while (!response) {
-      response = await this.promptUser('Ready to start? (y/n) ');
+      response = await inputHandler.promptUser('Ready to start? (y/n) ');
 
       switch (response.toLowerCase()) {
         case 'y':
@@ -501,7 +459,7 @@ module.exports = {
   startGame: async function (boardStr = null, playCount = 0) {
     const parsedBoard = this.transformVisualBoard(boardStr);
     const board = parsedBoard || this.getEmptyBoard();
-    const customPrompt = this.manageSpecialPrompts(board);
+    const customPrompt = inputHandler.manageSpecialPrompts(this, board);
     let turnCounter = playCount || 0;
     let currentTurn = playCount ? playerChars[(turnCounter - 1) % 2] : 'x';
 
