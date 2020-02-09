@@ -1,7 +1,7 @@
-const util = require("./util");
+const checker = require("./checkers");
 
 
-util.welcomeMessage()
+checker.welcomeMessage()
   .then(result => {
     if (!result) {
       console.log();
@@ -9,5 +9,5 @@ util.welcomeMessage()
       return process.exit(0);
     }
 
-    util.startGame();
+    checker.startGame();
   });
