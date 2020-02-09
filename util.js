@@ -1,13 +1,17 @@
 const { emptyCellChar, columnReference, rowReference, normalPlayerChars } = require("./constants");
 
 
+// Customize the way the logger is called and avoid modifying the original methods
+const log = (...args) => console.log(...args);
+log.error = console.error;
+log.warn = console.warn;
 
 module.exports = {
   /**
    * Convert a graphical board to an object
    * @param {string} board 
    */
-  transformVisualBoard: function (board) {
+  transformVisualBoard: board => {
     if (!board)
       return;
 
@@ -20,9 +24,9 @@ module.exports = {
       || parsedBoard.every(e => e.every(cell => cell === emptyCellChar));
 
     if (failedParsing) {
-      console.log();
-      console.warn('Failed to load custom board...');
-      console.log();
+      log();
+      log.warn('Failed to load custom board...');
+      log();
       return;
     }
 
@@ -34,10 +38,15 @@ module.exports = {
    * @param {number[]|number[][]} positions 
    * @returns {null|string[][]|string[]}
    */
-  positionTranslator: function (positions) {
+  positionTranslator: positions => {
     if (Array.isArray(positions[0]))
       return positions.map(m => [rowReference[m[0]], columnReference[m[1]]]);
 
     return positions.length ? [rowReference[positions[0]], columnReference[positions[1]]] : null;
   },
+
+  /**
+   * Log the desired info
+   */
+  log,
 };

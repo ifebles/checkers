@@ -1,7 +1,7 @@
 const inputHandler = require("./input");
 const painter = require("./painter");
 const { emptyCellChar, columnReference, rowReference, normalPlayerChars } = require("./constants");
-const { transformVisualBoard, positionTranslator } = require("./util");
+const { transformVisualBoard, positionTranslator, log } = require("./util");
 
 
 const emptyArray = [, , , , , , , ,];
@@ -396,15 +396,15 @@ module.exports = {
       if (gameStatus.result !== 'waiting') {
         switch (gameStatus.result) {
           case 'finished':
-            console.log();
-            console.log(`* The WINNER is "${gameStatus.winner}" !! *`)
-            console.log();
+            log();
+            log(`* The WINNER is "${gameStatus.winner}" !! *`)
+            log();
             break;
 
           case "tied":
-            console.log();
-            console.log('* The game is TIED !! *')
-            console.log();
+            log();
+            log('* The game is TIED !! *')
+            log();
             break;
         }
 
@@ -412,7 +412,7 @@ module.exports = {
       }
 
       turnCounter++;
-      console.log(`- Player "${currentTurn}" | turn ${Math.ceil(turnCounter / 2)} -`);
+      log(`- Player "${currentTurn}" | turn ${Math.ceil(turnCounter / 2)} -`);
 
       const pieces = this.locatePieces(board, currentTurn);
       const piecesLocation = positionTranslator(pieces);
@@ -421,9 +421,9 @@ module.exports = {
 
       while (inputMovement === '0') {
         let inputPiece = '';
-        console.log();
-        console.log('Select a piece to play:');
-        piecesLocation.forEach((f, i) => console.log(`${i + 1}) ${f[1]}${f[0]}`));
+        log();
+        log('Select a piece to play:');
+        piecesLocation.forEach((f, i) => log(`${i + 1}) ${f[1]}${f[0]}`));
 
         while (!inputPiece) {
           inputPiece = await customPrompt();
@@ -452,9 +452,9 @@ module.exports = {
           killedPieces: positionTranslator(m.killedPieces) || [],
         }));
 
-        console.log('Select a place to play into:');
-        console.log('0) go back');
-        optionsLocation.forEach((f, i) => console.log(
+        log('Select a place to play into:');
+        log('0) go back');
+        optionsLocation.forEach((f, i) => log(
           `${i + 1}) ${f.coordinate[1]}${f.coordinate[0]}${
           f.killedPieces.length ?
             ` // Pieces killed: ${f.killedPieces.map(m => m[1] + m[0]).join(', ')}` :
@@ -527,8 +527,8 @@ module.exports = {
       this.startGame();
     }
     else {
-      console.log();
-      console.log('See you next time!');
+      log();
+      log('See you next time!');
       return process.exit(0);
     }
   },

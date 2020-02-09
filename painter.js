@@ -1,3 +1,5 @@
+const { log } = require("./util");
+
 
 
 module.exports = {
@@ -10,29 +12,28 @@ module.exports = {
    * }} 
    */
   printBoard: function ({ board, columnReference, rowReference }) {
-    console.log();
-    console.log('  ', ...columnReference.map(m => ` ${m} `));
+    log();
+    log('  ', ...columnReference.map(m => ` ${m} `));
 
     board.forEach((f, i) => {
-      console.log(rowReference[i], ...f.map(m => `| ${m}`), '|', rowReference[i]);
+      log(rowReference[i], ...f.map(m => `| ${m}`), '|', rowReference[i]);
     });
 
-    console.log('  ', ...columnReference.map(m => ` ${m} `));
-
-    console.log();
+    log('  ', ...columnReference.map(m => ` ${m} `));
+    log();
   },
 
   /**
    * Print welcome message
    */
   printWelcomeMessage: function (action = async () => true) {
-    console.log();
-    console.log('Welcome to a new game of * CHECKER *');
-    console.log();
-    console.log('- Player 1 (x) will always move first');
-    console.log('- Each time a new game starts, the starting position shuffles');
-    console.log();
-    console.log();
+    log();
+    log('Welcome to a new game of * CHECKER *');
+    log();
+    log('- Player 1 (x) will always move first');
+    log('- Each time a new game starts, the starting position shuffles');
+    log();
+    log();
 
     if (typeof action === 'function')
       return action();
@@ -42,15 +43,15 @@ module.exports = {
    * Print help
    */
   printHelp: function () {
-    console.log();
-    console.log('* HELP *');
-    console.log();
-    console.log('- To move a piece, select the specified option number for the playable fields or input the field name');
-    console.log('- To go back in the menu, type "0"');
-    console.log('- The uppercase symbols (e.g. "X", "O") represent KING pieces');
-    console.log('- To exit, press `Ctrl + C`');
-    console.log('- To print the board again, type "board"');
-    console.log('- To print this help again, type "help"');
-    console.log();
+    log();
+    log('* HELP *');
+    log();
+    log('- To move a piece, select the specified option number for the playable fields or input the field name');
+    log('- To go back in the menu, type "0"');
+    log('- The uppercase symbols (e.g. "X", "O") represent KING pieces');
+    log('- To exit, press `Ctrl + C`');
+    log('- To print the board again, type "board"');
+    log('- To print this help again, type "help"');
+    log();
   },
 };
