@@ -95,7 +95,7 @@ module.exports = {
   getGameStatus: function (board, currentPlayer) {
     const oponentSymbol = playerChars.find(f => f !== currentPlayer.symbol);
     const status = {
-      result: 'waiting',
+      result: 'playing',
       winner: null,
     };
 
@@ -170,7 +170,7 @@ module.exports = {
 
       const gameStatus = this.getGameStatus(board, { symbol: currentTurn, startsTop });
 
-      if (gameStatus.result !== 'waiting') {
+      if (gameStatus.result !== 'playing') {
         switch (gameStatus.result) {
           case 'finished':
             log();
