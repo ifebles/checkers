@@ -30,4 +30,18 @@ module.exports = {
       X: 'x',
     };
   },
+
+  /**
+   * Get list of player characters
+   */
+  get playerList() {
+    return ['o', 'x'];
+  },
+
+  /**
+   * Array with the dimentions of the board
+   */
+  get emptyArray (){
+    return [, , , , , , , ,];
+  },
 };

@@ -28,7 +28,7 @@ module.exports = {
    */
   printWelcomeMessage: function (action = async () => true) {
     log();
-    log('Welcome to a new game of * CHECKER *');
+    log('Welcome to a new game of * CHECKERS *');
     log();
     log('- Player 1 (x) will always move first');
     log('- Each time a new game starts, the starting position shuffles');
