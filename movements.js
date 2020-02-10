@@ -1,4 +1,5 @@
 const { playerList, emptyCellChar, emptyArray } = require("./constants");
+const { positionTranslator } = require("./util");
 
 
 
@@ -201,5 +202,82 @@ module.exports = {
       return tempResult[0];
 
     return tempResult[1];
+  },
+
+  /**
+   * Find all the pieces for the specified player
+   * @param {string[][]} board 
+   * @param {string} player 
+   * @returns {number[][]}
+   */
+  locatePieces: function (board, player) {
+    const pieceLocations = [];
+    board.forEach((rowItem, rowIndex) => {
+      rowItem.forEach((columnItem, columnIndex) => {
+        if (columnItem.toLowerCase() === player)
+          pieceLocations.push([rowIndex, columnIndex]);
+      });
+    });
+
+    return pieceLocations;
+  },
+
+  /**
+   * Manage player actions
+   * @param {string[][]} board 
+   * @param {string} player 
+   * @param {boolean} startsTop 
+   */
+  managePlay: function (board, player, startsTop) {
+    const pieces = this.locatePieces(board, player);
+    const translatedPieces = positionTranslator(pieces);
+
+    return {
+      rawLocations: pieces,
+      translatedLocations: translatedPieces,
+      /**
+       * Select the specified piece
+       * @param {number} pieceIndex
+       */
+      select: pieceIndex => {
+        const piece = pieces[pieceIndex];
+
+        if (!piece)
+          throw new Error('Invalid index');
+
+        const options = this.calculateMovement(board, player, piece, startsTop);
+        const translatedOptions = options.map(m => ({
+          coordinate: positionTranslator(m.coordinate),
+          killedPieces: positionTranslator(m.killedPieces) || [],
+        }));
+
+        return {
+          raw: options,
+          translated: translatedOptions,
+          /**
+           * Move the selected piece to the specified place
+           * @param {number} optionIndex
+           */
+          execute: optionIndex => {
+            const selectedOption = options[optionIndex];
+
+            if (!selectedOption)
+              throw new Error('Invalid index');
+
+            const movingPiece = board[piece[0]][piece[1]];
+            selectedOption.killedPieces.concat([piece]).forEach(f => {
+              board[f[0]][f[1]] = emptyCellChar;
+            });
+
+            board[selectedOption.coordinate[0]][selectedOption.coordinate[1]] = movingPiece;
+
+            // Check for a new KING
+            if ((!startsTop && selectedOption.coordinate[0] === 0)
+              || (startsTop && selectedOption.coordinate[0] === 7))
+              board[selectedOption.coordinate[0]][selectedOption.coordinate[1]] = movingPiece.toUpperCase();
+          },
+        }
+      },
+    };
   },
 };

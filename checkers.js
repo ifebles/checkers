@@ -2,7 +2,7 @@ const inputHandler = require("./input");
 const painter = require("./painter");
 const { emptyCellChar, columnReference, rowReference, normalPlayerChars, playerList, emptyArray } = require("./constants");
 const moves = require("./movements");
-const { transformVisualBoard, positionTranslator, log } = require("./util");
+const { transformVisualBoard, log, getIndexFromUserInput } = require("./util");
 
 const playerChars = playerList;
 
@@ -88,24 +88,6 @@ module.exports = {
   },
 
   /**
-   * Find all the pieces for the specified player
-   * @param {string[][]} board 
-   * @param {string} player 
-   * @returns {number[][]}
-   */
-  locatePieces: function (board, player) {
-    const pieceLocations = [];
-    board.forEach((rowItem, rowIndex) => {
-      rowItem.forEach((columnItem, columnIndex) => {
-        if (columnItem.toLowerCase() === player)
-          pieceLocations.push([rowIndex, columnIndex]);
-      });
-    });
-
-    return pieceLocations;
-  },
-
-  /**
    * Get the game status
    * @param {string[][]} board 
    * @param {{symbol: string, startsTop: boolean}} currentPlayer 
@@ -118,8 +100,8 @@ module.exports = {
     };
 
     const playerPieces = {
-      [normalPlayerChars.O]: this.locatePieces(board, normalPlayerChars.O),
-      [normalPlayerChars.X]: this.locatePieces(board, normalPlayerChars.X),
+      [normalPlayerChars.O]: moves.locatePieces(board, normalPlayerChars.O),
+      [normalPlayerChars.X]: moves.locatePieces(board, normalPlayerChars.X),
     };
 
     if (!playerPieces.o.length) {
@@ -209,93 +191,31 @@ module.exports = {
       turnCounter++;
       log(`- Player "${currentTurn}" | turn ${Math.ceil(turnCounter / 2)} -`);
 
-      const pieces = this.locatePieces(board, currentTurn);
-      const piecesLocation = positionTranslator(pieces);
+      const pieces = moves.managePlay(board, currentTurn, startsTop);
 
-      let inputMovement = '0';
-
-      while (inputMovement === '0') {
-        let inputPiece = '';
+      while (true) {
         log();
         log('Select a piece to play:');
-        piecesLocation.forEach((f, i) => log(`${i + 1}) ${f[1]}${f[0]}`));
+        pieces.translatedLocations.forEach((f, i) => log(`${i + 1}) ${f[1]}${f[0]}`));
 
-        while (!inputPiece) {
-          inputPiece = await customPrompt();
-
-          if (inputPiece.length === 2 && inputPiece.match(/^[a-h][1-8]$/i)) {
-            const letter = inputPiece[0].toUpperCase();
-            const number = inputPiece.substr(1);
-            const inxResult = piecesLocation.findIndex(f => f[0] === number && f[1] === letter);
-
-            if (inxResult > -1)
-              inputPiece = `${inxResult + 1}`;
-          }
-
-          if (isNaN(inputPiece)
-            || +inputPiece - 1 < 0 ||
-            +inputPiece > pieces.length) {
-            inputPiece = '';
-            continue;
-          }
-        }
-
-        const selectedPiece = pieces[+inputPiece - 1];
-        const options = moves.calculateMovement(board, currentTurn, selectedPiece, startsTop);
-        const optionsLocation = options.map(m => ({
-          coordinate: positionTranslator(m.coordinate),
-          killedPieces: positionTranslator(m.killedPieces) || [],
-        }));
+        const pieceIndex = await getIndexFromUserInput(customPrompt, pieces.translatedLocations);
+        const options = pieces.select(pieceIndex);
 
         log('Select a place to play into:');
         log('0) go back');
-        optionsLocation.forEach((f, i) => log(
+        options.translated.forEach((f, i) => log(
           `${i + 1}) ${f.coordinate[1]}${f.coordinate[0]}${
           f.killedPieces.length ?
             ` // Pieces killed: ${f.killedPieces.map(m => m[1] + m[0]).join(', ')}` :
             ''}`));
 
-        inputMovement = '';
-        while (!inputMovement) {
-          inputMovement = await customPrompt();
+        const optionIndex = await getIndexFromUserInput(customPrompt, options.translated.map(m => m.coordinate), true);
 
-          if (inputMovement === '0')
-            continue;
-
-          if (inputMovement.length === 2 && inputMovement.match(/^[a-h][1-8]$/i)) {
-            const letter = inputMovement[0].toUpperCase();
-            const number = inputMovement.substr(1);
-            const inxResult = optionsLocation.findIndex(f => f.coordinate[0] === number && f.coordinate[1] === letter);
-
-            if (inxResult > -1)
-              inputMovement = `${inxResult + 1}`;
-          }
-
-          if (isNaN(inputMovement)
-            || +inputMovement - 1 < 0 ||
-            +inputMovement > options.length) {
-            inputMovement = '';
-            continue;
-          }
-        }
-
-        if (inputMovement === '0') {
-          inputPiece = '';
+        if (optionIndex === -1)
           continue;
-        }
 
-        const selectedDestination = options[+inputMovement - 1];
-        const movingPiece = board[selectedPiece[0]][selectedPiece[1]];
-        selectedDestination.killedPieces.concat([selectedPiece]).forEach(f => {
-          board[f[0]][f[1]] = emptyCellChar;
-        });
-
-        board[selectedDestination.coordinate[0]][selectedDestination.coordinate[1]] = movingPiece;
-
-        // Check for a new KING
-        if ((!startsTop && selectedDestination.coordinate[0] === 0)
-          || (startsTop && selectedDestination.coordinate[0] === 7))
-          board[selectedDestination.coordinate[0]][selectedDestination.coordinate[1]] = movingPiece.toUpperCase();
+        options.execute(optionIndex);
+        break;
       }
 
       painter.printBoard({ board, columnReference, rowReference });
