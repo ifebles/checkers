@@ -3,6 +3,7 @@ const painter = require("./painter");
 const { emptyCellChar, columnReference, rowReference, normalPlayerChars, playerList, emptyArray } = require("./constants");
 const moves = require("./movements");
 const { transformVisualBoard, log, getIndexFromUserInput } = require("./util");
+const Logger = require("./logger");
 
 const playerChars = playerList;
 
@@ -158,6 +159,7 @@ module.exports = {
     const customPrompt = inputHandler.manageSpecialPrompts(painter, { board, columnReference, rowReference });
     let turnCounter = playCount || 0;
     let currentTurn = playCount ? playerChars[(turnCounter - 1) % 2] : 'x';
+    const history = new Logger(currentTurn, playerChars[0], board);
 
     if (!parsedBoard)
       playerChars.forEach((f, i) => this.setPlayerStartingPosition(board, f, i === 0));
@@ -169,12 +171,15 @@ module.exports = {
       const startsTop = playerChars[0] === currentTurn;
 
       const gameStatus = this.getGameStatus(board, { symbol: currentTurn, startsTop });
+      history.setStatus(gameStatus.result);
 
       if (gameStatus.result !== 'playing') {
         switch (gameStatus.result) {
           case 'finished':
+            history.setWinner(gameStatus.winner);
+
             log();
-            log(`* The WINNER is "${gameStatus.winner}" !! *`)
+            log(`* The WINNER is "${gameStatus.winner}" !! *`);
             log();
             break;
 
@@ -215,6 +220,7 @@ module.exports = {
           continue;
 
         options.execute(optionIndex);
+        history.addAction(board, pieces.rawLocations[pieceIndex], options.raw[optionIndex]);
         break;
       }
 
