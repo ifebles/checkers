@@ -162,6 +162,7 @@ const calculateBestPlays = (board, player, startsTop, piecesOptions, simulating 
         .reduce((o, e) => o += e.points, 0),
     }));
 
+  // Evaluate play convenience regarding the "quantified play quality" of the oponent depending on the action taken
   if (!simulating) {
     const consequenceResult = result.map(m => ({
       ...m,
@@ -171,8 +172,8 @@ const calculateBestPlays = (board, player, startsTop, piecesOptions, simulating 
     const playValues = consequenceResult
       .map(m => m.oponentPlayValue)
       .filter((e, i, o) => o.indexOf(e) === i)
-      .sort()
-      .map((m, i) => ({ value: m, penalty: i - 2 }));
+      .sort((a, b) => a - b)
+      .map((m, i) => ({ value: m, penalty: i - 3 }));
 
     const penaltyList = consequenceResult
       .map(m => ({
