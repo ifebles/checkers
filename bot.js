@@ -1,6 +1,6 @@
 const moves = require("./movements");
 const { playerList, emptyArray } = require("./constants");
-const { positionTranslator } = require("./util");
+const { log, positionTranslator } = require("./util");
 
 
 /**
@@ -195,12 +195,40 @@ module.exports = {
     const playable = getPlayablePieces(board, player, pieces.rawLocations, startsTop);
 
     const result = calculateBestPlays(board, player, startsTop, playable);
-    console.log(
-      result.map(m => ({
-        ...m,
-        trans: positionTranslator(playable.find(f => f.index === m.piece).piece),
-        action: JSON.stringify(playable.find(f => f.index === m.piece).options[m.option])
-      }))
+    const highestValue = result
+      .map(m => m.points)
+      .filter((e, i, o) => o.indexOf(e) === i)
+      .sort((a, b) => b - a)[0];
+
+    const bestPlays = result.filter(f => f.points === highestValue);
+
+    if (!bestPlays.length)
+      return log.warn('Unhandled scenario... no play found');
+
+    let selectedPlay;
+
+    if (bestPlays.length > 1)
+      selectedPlay = bestPlays[Math.floor((Math.random() * 100) % bestPlays.length)];
+    else
+      selectedPlay = bestPlays[0];
+
+    pieces
+      .select(selectedPlay.piece)
+      .execute(selectedPlay.option);
+
+    const pieceMoved = positionTranslator(playable.find(f => f.index === selectedPlay.piece).piece);
+    const location = positionTranslator(playable.find(f => f.index === selectedPlay.piece).options[selectedPlay.option].coordinate);
+    const killed = (positionTranslator(playable.find(f => f.index === selectedPlay.piece).options[selectedPlay.option].killedPieces) || [])
+      .map(m => m[1] + m[0]).join(', ');
+
+    log();
+    log(
+      'CPU played:',
+      pieceMoved[1] + pieceMoved[0],
+      'into',
+      location[1] + location[0] + (killed ? ';' : ''),
+      killed ? 'Pieces killed: ' + killed : ''
     );
+    log();
   },
 };

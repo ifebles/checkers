@@ -210,8 +210,8 @@ module.exports = {
 
       if (vs === 'cpu' && currentTurn === normalPlayerChars.O) {
         bot.play(board, currentTurn, startsTop);
-        await customPrompt();
 
+        painter.printBoard({ board, columnReference, rowReference });
         currentTurn = playerChars[(turnCounter - 1) % 2];
         continue;
       }
