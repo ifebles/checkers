@@ -25,8 +25,9 @@ module.exports = {
 
   /**
    * Print welcome message
+   * @param {() => Promise<"0"|"1"|"2"|"3">} action
    */
-  printWelcomeMessage: function (action = async () => true) {
+  printWelcomeMessage: function (action) {
     log();
     log('Welcome to a new game of * CHECKERS *');
     log();

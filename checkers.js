@@ -4,6 +4,7 @@ const { emptyCellChar, columnReference, rowReference, normalPlayerChars, playerL
 const moves = require("./movements");
 const { transformVisualBoard, log, getIndexFromUserInput } = require("./util");
 const Logger = require("./logger");
+const bot = require("./bot");
 
 const playerChars = playerList;
 
@@ -30,19 +31,25 @@ module.exports = {
 
   /**
    * Setup the starting point for the game
-   * @param {() => Promise<boolean>} action 
+   * @param {() => Promise<"0"|"1"|"2"|"3">} action
    */
   welcomeMessage: function (action) {
     const postWelcomeAction = action || (async () => {
       let response = '';
+      log('What would you like to do?');
+      log('0) Exit');
+      log('1) Play against another player');
+      log('2) Play against the CPU');
+      log('3) Train the CPU');
 
       while (!response) {
-        response = await inputHandler.promptUser('Ready to start? (y/n) ');
+        response = await inputHandler.promptUser();
 
-        switch (response.toLowerCase()) {
-          case 'y':
-          case 'n':
-            response = response.toLowerCase();
+        switch (response) {
+          case '0':
+          case '1':
+          case '2':
+          case '3':
             break;
 
           default:
@@ -51,7 +58,7 @@ module.exports = {
         }
       }
 
-      return response === 'y';
+      return response;
     });
 
     return painter.printWelcomeMessage(postWelcomeAction);
@@ -150,10 +157,11 @@ module.exports = {
 
   /**
    * Start the game
+   * @param {"player"|"cpu"} vs
    * @param {string?} boardStr 
    * @param {number?} playCount 
    */
-  startGame: async function (boardStr = null, playCount = 0) {
+  startGame: async function (vs, boardStr = null, playCount = 0) {
     const parsedBoard = transformVisualBoard(boardStr);
     const board = parsedBoard || this.getEmptyBoard();
     const customPrompt = inputHandler.manageSpecialPrompts(painter, { board, columnReference, rowReference });
@@ -166,6 +174,8 @@ module.exports = {
 
     painter.printBoard({ board, columnReference, rowReference });
     painter.printHelp();
+
+    /////////////////////////
 
     while (true) {
       const startsTop = playerChars[0] === currentTurn;
@@ -195,6 +205,16 @@ module.exports = {
 
       turnCounter++;
       log(`- Player "${currentTurn}" | turn ${Math.ceil(turnCounter / 2)} -`);
+
+      /////////////////////////
+
+      if (vs === 'cpu' && currentTurn === normalPlayerChars.O) {
+        bot.play(board, currentTurn, startsTop);
+        await customPrompt();
+
+        currentTurn = playerChars[(turnCounter - 1) % 2];
+        continue;
+      }
 
       const pieces = moves.managePlay(board, currentTurn, startsTop);
 
