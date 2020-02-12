@@ -31,8 +31,9 @@ const getOponentPlayablePieces = (board, player, playerStartsTop) => {
  * @param {boolean} startsTop 
  * @param {number} piece 
  * @param {number} option 
+ * @param {number} amountOfSimulations 
  */
-const simulatePlay = (board, player, startsTop, piece, option) => {
+const simulatePlay = (board, player, startsTop, piece, option, amountOfSimulations = 1) => {
   const boardCopy = [...board].map(m => [...m]);
   moves.managePlay(boardCopy, player, startsTop)
     .select(piece)
@@ -42,8 +43,25 @@ const simulatePlay = (board, player, startsTop, piece, option) => {
   const oponentPlayablePieces = getOponentPlayablePieces(boardCopy, player, startsTop);
   const oponentQuantifiedPlayResult = calculateBestPlays(boardCopy, oponent, !startsTop, oponentPlayablePieces, true);
 
-  return oponentQuantifiedPlayResult
+  let result = oponentQuantifiedPlayResult
     .reduce((o, e) => o += e.points, 0);
+
+  if (amountOfSimulations > 1) {
+    let caseCounter = 0;
+    const summedResults = oponentPlayablePieces.reduce((o, e) => {
+      e.options.forEach((_f, i) => {
+        caseCounter++;
+        o += simulatePlay(boardCopy, oponent, !startsTop, e.index, i, amountOfSimulations - 1);
+      });
+
+      return o;
+    }, 0);
+
+    if (caseCounter)
+      result -= summedResults / caseCounter;
+  }
+
+  return result;
 };
 
 
