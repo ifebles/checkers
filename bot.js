@@ -1,5 +1,5 @@
 const moves = require("./movements");
-const { playerList } = require("./constants");
+const { playerList, emptyArray } = require("./constants");
 const { positionTranslator } = require("./util");
 
 
@@ -116,8 +116,25 @@ const calculateBestPlays = (board, player, startsTop, piecesOptions, simulating 
       }, []),
     }));
 
+  // Check if the piece can become a KING
+  piecesOptions
+    .filter(f =>
+      // If not a KING:
+      board[f.piece[0]][f.piece[1]] === board[f.piece[0]][f.piece[1]].toLowerCase()
+      && f.options.some(s => s.coordinate[0] === (startsTop ? emptyArray.length - 1 : 0)))
+    .forEach(f => priority.push({
+      index: f.index,
+      options: f.options.reduce((o, e, i) => {
+        if (e.coordinate[0] === (startsTop ? emptyArray.length - 1 : 0))
+          o.push({
+            index: i,
+            points: 2,
+          });
 
-  // When evaluating a random movement, give priority points to actions making the oponent free a "kings" field
+        return o;
+      }, []),
+    }));
+
 
   /**
    * @type {{piece: number, option: number, points: number}[]}
