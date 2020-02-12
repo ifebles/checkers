@@ -19,23 +19,41 @@ const getOponentPlayablePieces = (board, player, playerStartsTop) => {
   const oponent = playerList.find(f => f !== player);
 
   return moves.locatePieces(board, oponent)
-    .map(m => ({ piece: m, options: moves.calculateMovement(board, oponent, m, !playerStartsTop) }));
+    .map((m, i) => ({ piece: m, index: i, options: moves.calculateMovement(board, oponent, m, !playerStartsTop) }))
+    .filter(f => f.options.length);
 };
 
 
+/**
+ * Simulate a play and get the oponent quantified sum as the returned value
+ * @param {string[][]} board 
+ * @param {string} player 
+ * @param {boolean} startsTop 
+ * @param {number} piece 
+ * @param {number} option 
+ */
 const simulatePlay = (board, player, startsTop, piece, option) => {
   const boardCopy = [...board].map(m => [...m]);
   moves.managePlay(boardCopy, player, startsTop)
     .select(piece)
     .execute(option);
 
+  const oponent = playerList.find(f => f !== player);
+  const oponentPlayablePieces = getOponentPlayablePieces(boardCopy, player, startsTop);
+  const oponentQuantifiedPlayResult = calculateBestPlays(boardCopy, oponent, !startsTop, oponentPlayablePieces, true);
 
+  return oponentQuantifiedPlayResult
+    .reduce((o, e) => o += e.points, 0);
 };
 
 
 /**
- * 
- * @param {ReturnType<getPlayablePieces>} piecesOptions 
+ * Quantify each piece action to decide the best course
+ * @param {string[][]} board 
+ * @param {string} player 
+ * @param {boolean} startsTop 
+ * @param {ReturnType<getPlayablePieces>} piecesOptions
+ * @param {boolean} simulating 
  */
 const calculateBestPlays = (board, player, startsTop, piecesOptions, simulating = false) => {
   /**
@@ -83,11 +101,6 @@ const calculateBestPlays = (board, player, startsTop, piecesOptions, simulating 
         }, 0),
     }));
 
-  // Remember to check the plays on red alert of being eaten next turn
-
-
-  // Remember to check plays that can avoid a kill without moving the threatened piece
-
   // Check the ones that can move without killing
   piecesOptions
     .forEach(f => priority.push({
@@ -103,29 +116,13 @@ const calculateBestPlays = (board, player, startsTop, piecesOptions, simulating 
       }, []),
     }));
 
-  // if (!simulating)
-  //   ;
-
 
   // When evaluating a random movement, give priority points to actions making the oponent free a "kings" field
-  
-    // console.log(JSON.stringify(piecesOptions, null, ' '));
-    // console.log('|||||||||||||||');
-    // console.log();
-    // console.log(JSON.stringify(priority.map(m => ({
-    //   ...m, piece: positionTranslator(
-    //     piecesOptions.find(f => f.index === m.index).piece
-    //   )
-    // })), null, ' '));
-    // console.log('|||||||||||||||');
-    // console.log();
-    // console.log(JSON.stringify(threatened.map(m => ({
-    //   ...m, piece: positionTranslator(
-    //     piecesOptions.find(f => f.index === m.index).piece
-    //   )
-    // })), null, ' '));
 
-  return priority
+  /**
+   * @type {{piece: number, option: number, points: number}[]}
+   */
+  const result = priority
     .reduce((o, e) => {
       e.options.forEach(f => {
         const entry = o.find(s => s.piece === e.index && s.option === f.index);
@@ -147,6 +144,31 @@ const calculateBestPlays = (board, player, startsTop, piecesOptions, simulating 
         .filter(f => f.index === m.piece)
         .reduce((o, e) => o += e.points, 0),
     }));
+
+  if (!simulating) {
+    const consequenceResult = result.map(m => ({
+      ...m,
+      oponentPlayValue: simulatePlay(board, player, startsTop, m.piece, m.option),
+    }));
+
+    const playValues = consequenceResult
+      .map(m => m.oponentPlayValue)
+      .filter((e, i, o) => o.indexOf(e) === i)
+      .sort()
+      .map((m, i) => ({ value: m, penalty: i - 2 }));
+
+    const penaltyList = consequenceResult
+      .map(m => ({
+        piece: m.piece,
+        option: m.option,
+        penalty: playValues.find(f => f.value === m.oponentPlayValue).penalty,
+      }));
+
+    result.forEach(f => f.points -= penaltyList
+      .find(p => p.piece === f.piece && p.option === f.option).penalty);
+  }
+
+  return result;
 };
 
 
@@ -163,6 +185,5 @@ module.exports = {
         action: JSON.stringify(playable.find(f => f.index === m.piece).options[m.option])
       }))
     );
-
   },
 };
