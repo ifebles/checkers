@@ -25,7 +25,7 @@ const getOponentPlayablePieces = (board, player, playerStartsTop) => {
 
 
 /**
- * Simulate a play and get the oponent quantified sum (score) as the returned value and value indicating if can be killed 
+ * Simulate a play and get the oponent quantified sum (score) as the returned value and value indicating if can be killed
  * @param {string[][]} board 
  * @param {string} player 
  * @param {boolean} startsTop 
@@ -202,6 +202,37 @@ const calculateBestPlays = (board, player, startsTop, piecesOptions, simulating 
       ...m,
       oponentPlayValue: simulatePlay(board, player, startsTop, getPlayablePiece(m.piece), m.option),
     }));
+
+    let higherRawScore = result.map(m => m.points).sort((a, b) => b - a)[0];
+
+    // If no direct distinction found for the (still raw) best scored play:
+    if (result.filter(f => f.points === higherRawScore).length > 1)
+      simulatedResults
+        // Take those with safe plays if no "critical play" found
+        .filter(f => higherRawScore === 1 ? !f.oponentPlayValue.killable : true)
+        .forEach(f => {
+          // Simulate the play
+          const boardCopy = [...board].map(m => [...m]);
+          moves.managePlay(boardCopy, player, startsTop)
+            .select(f.piece)
+            .execute(f.option);
+
+          const futurePlays = getPlayablePieces(boardCopy, player, moves.locatePieces(boardCopy, player), startsTop);
+
+          // Check the movements threatening enemy pieces
+          const bestAmountOfKillsPerPiece = futurePlays
+            .map(m => m.options.map(m => m.killedPieces.length
+              // If there are KING pieces threatened, add 2 more points (making 3 altogether) for each
+              + m.killedPieces.reduce((o, e) => o += pieceIsKing(e) ? 2 : 0, 0)))
+            .map(m => m.sort((a, b) => b - a)[0])
+            .filter(f => f > 0)
+            .sort((a, b) => b - a);
+
+          if (bestAmountOfKillsPerPiece.length)
+            result.find(r => r.piece === f.piece && r.option === f.option)
+              // Add points as: (2 * bestAmountOfPossibleKills) + (amountOfKillOptions - 1)
+              .points += (2 * bestAmountOfKillsPerPiece[0]) + (bestAmountOfKillsPerPiece.length - 1);
+        });
 
     const consequenceResult = simulatedResults.map(m => ({
       ...m,
