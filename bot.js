@@ -239,7 +239,9 @@ const calculateBestPlays = (board, player, startsTop, piecesOptions, simulating 
       // Increase the "oponentPlayValue" if the piece can be killed
       alteredPlayValue: m.oponentPlayValue.result * (m.oponentPlayValue.killable ?
         // If the piece is KING, set the value multiplier to 3; multiply by 2 if not
-        (pieceIsKing(getPlayablePiece(m.piece).piece) ? 3 : 2) :
+        (pieceIsKing(getPlayablePiece(m.piece).piece) ? 3 : 2)
+        // If the action actually kills more than one piece, divide by 2 to reduce the multiplier
+        / (piecesOptions.find(f => f.index === m.piece).options[m.option].killedPieces.length ? 2 : 1) :
         1),
     }));
 
