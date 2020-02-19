@@ -15,6 +15,12 @@ const getPlayablePieces = (board, player, playerPieces, startsTop) => playerPiec
   .filter(f => f.options.length);
 
 
+/**
+ * Get the pieces that the oponent can play
+ * @param {string[][]} board 
+ * @param {string} player 
+ * @param {boolean} playerStartsTop 
+ */
 const getOponentPlayablePieces = (board, player, playerStartsTop) => {
   const oponent = playerList.find(f => f !== player);
 
@@ -245,11 +251,17 @@ const calculateBestPlays = (board, player, startsTop, piecesOptions, simulating 
         1),
     }));
 
+    log.bot(consequenceResult);
+    log.bot();
+
     const playValues = consequenceResult
       .map(m => m.alteredPlayValue)
       .filter((e, i, o) => o.indexOf(e) === i)
       .sort((a, b) => a - b)
       .map((m, i) => ({ value: m, penalty: i - 2 }));
+
+    log.bot(playValues)
+    log.bot();
 
     const penaltyList = consequenceResult
       .map(m => ({
@@ -257,6 +269,9 @@ const calculateBestPlays = (board, player, startsTop, piecesOptions, simulating 
         option: m.option,
         penalty: playValues.find(f => f.value === m.alteredPlayValue).penalty,
       }));
+
+    log.bot(penaltyList)
+    log.bot();
 
     result.forEach(f => f.points -= penaltyList
       .find(p => p.piece === f.piece && p.option === f.option).penalty);
@@ -276,6 +291,13 @@ module.exports = {
       .map(m => m.points)
       .filter((e, i, o) => o.indexOf(e) === i)
       .sort((a, b) => b - a)[0];
+
+    log.bot(result.map(m => ({
+      ...m,
+      pieces: positionTranslator(playable.find(f => f.index === m.piece).piece),
+      location: positionTranslator(playable.find(f => f.index === m.piece).options[m.option].coordinate),
+      kills: JSON.stringify(playable.find(f => f.index === m.piece).options[m.option].killedPieces),
+    })));
 
     const bestPlays = result.filter(f => f.points === highestValue);
 

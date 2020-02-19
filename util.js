@@ -1,3 +1,4 @@
+const debug = require("debug");
 const { emptyCellChar, columnReference, rowReference, normalPlayerChars } = require("./constants");
 
 
@@ -5,6 +6,19 @@ const { emptyCellChar, columnReference, rowReference, normalPlayerChars } = requ
 const log = (...args) => console.log(...args);
 log.error = console.error;
 log.warn = console.warn;
+
+log.debug = ({ ns = 'app:log', msg = '', logger = console.log, printNoNS_ifBlank = false } = {}, ...args) => {
+  if (printNoNS_ifBlank && !msg && debug.enabled(ns))
+    return logger();
+
+  const debugOut = debug(ns);
+  debugOut.log = logger.bind(console);
+
+  const processedArgs = msg ? [msg, ...args] : args.length ? args : [msg];
+  debugOut(...processedArgs);
+};
+
+log.bot = (msg, ...args) => log.debug({ ns: 'app:bot', msg, printNoNS_ifBlank: true }, ...args);
 
 module.exports = {
   /**
