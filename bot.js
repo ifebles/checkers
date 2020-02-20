@@ -2,6 +2,18 @@ const moves = require("./movements");
 const { playerList, emptyArray, emptyCellChar } = require("./constants");
 const { log, positionTranslator, pieceIsKing } = require("./util");
 
+/**
+ * @typedef {{
+  piece: number[],
+  index: number,
+  options: {
+      coordinate: number[],
+      killedPieces: number[][],
+  }[],
+}} IPlayablePiece
+ */
+
+
 
 /**
  * Filter the playable pieces
@@ -122,19 +134,11 @@ const getOponentVulnerablePlaces = (board, player, startsTop) => {
  * @param {string[][]} board 
  * @param {string} player 
  * @param {boolean} startsTop 
- * @param {{
-    piece: number[],
-    index: number,
-    options: {
-        coordinate: number[],
-        killedPieces: number[][],
-    }[],
-  }} playablePiece 
+ * @param {IPlayablePiece} playablePiece 
  * @param {number} option 
- * @param {number} amountOfSimulations 
- */
-const simulatePlay = (board, player, startsTop, playablePiece, option, amountOfSimulations = 1) => {
-  const boardCopy = [...board].map(m => [...m]);
+*/
+const simulateMovement = (board, player, startsTop, playablePiece, option) => {
+  const boardCopy = board.map(m => [...m]);
   const piece = playablePiece.index;
   const pieceIntendedCoordinate = playablePiece.options[option].coordinate;
 
@@ -142,12 +146,36 @@ const simulatePlay = (board, player, startsTop, playablePiece, option, amountOfS
     .select(piece)
     .execute(option);
 
-  const oponent = playerList.find(f => f !== player);
   const oponentPlayablePieces = getOponentPlayablePieces(boardCopy, player, startsTop);
-  const oponentQuantifiedPlayResult = calculateBestPlays(boardCopy, oponent, !startsTop, oponentPlayablePieces, true);
-
-  const killable = oponentPlayablePieces.some(s => s.options.some(o => o.killedPieces
+  const isPieceKillable = oponentPlayablePieces.some(s => s.options.some(o => o.killedPieces
     .some(k => k[0] === pieceIntendedCoordinate[0] && k[1] === pieceIntendedCoordinate[1])));
+
+  return {
+    boardCopy,
+    isPieceKillable,
+    oponentPlayablePieces,
+  };
+};
+
+
+/**
+ * Simulate a play and get the oponent quantified sum (score) as the returned value and value indicating if can be killed
+ * @param {string[][]} board 
+ * @param {string} player 
+ * @param {boolean} startsTop 
+ * @param {IPlayablePiece} playablePiece 
+ * @param {number} option 
+ * @param {number} amountOfSimulations 
+ */
+const simulatePlay = (board, player, startsTop, playablePiece, option, amountOfSimulations = 1) => {
+  const {
+    boardCopy,
+    isPieceKillable: killable,
+    oponentPlayablePieces,
+  } = simulateMovement(board, player, startsTop, playablePiece, option);
+
+  const oponent = playerList.find(f => f !== player);
+  const oponentQuantifiedPlayResult = calculateBestPlays(boardCopy, oponent, !startsTop, oponentPlayablePieces, true);
 
   let result = oponentQuantifiedPlayResult
     .reduce((o, e) => o += e.points, 0);
