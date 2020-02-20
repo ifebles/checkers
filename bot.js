@@ -1,6 +1,6 @@
 const moves = require("./movements");
 const { playerList, emptyArray } = require("./constants");
-const { log, positionTranslator } = require("./util");
+const { log, positionTranslator, pieceIsKing } = require("./util");
 
 
 /**
@@ -103,8 +103,6 @@ const calculateBestPlays = (board, player, startsTop, piecesOptions, simulating 
    */
   const threatened = [];
 
-  const pieceIsKing = coordinates => board[coordinates[0]][coordinates[1]] === board[coordinates[0]][coordinates[1]].toUpperCase();
-
   // Check for the ones with secured kills
   piecesOptions
     .filter(f => f.options.some(s => s.killedPieces.length))
@@ -114,7 +112,7 @@ const calculateBestPlays = (board, player, startsTop, piecesOptions, simulating 
         if (e.killedPieces.length)
           o.push({
             index: i,
-            points: (e.killedPieces.some(s => pieceIsKing(s)) ? 3 : 2) * e.killedPieces.length,
+            points: (e.killedPieces.some(s => pieceIsKing(board, s)) ? 3 : 2) * e.killedPieces.length,
           });
 
         return o;
@@ -128,7 +126,7 @@ const calculateBestPlays = (board, player, startsTop, piecesOptions, simulating 
       .some(k => k[0] === f.piece[0] && k[1] === f.piece[1]))))
     .forEach(f => threatened.push({
       index: f.index,
-      points: (pieceIsKing(f.piece) ? 3 : 2) * oponentOptions
+      points: (pieceIsKing(board, f.piece) ? 3 : 2) * oponentOptions
         .filter(oponent => oponent.options.some(option => option.killedPieces
           .some(k => k[0] === f.piece[0] && k[1] === f.piece[1])))
         .reduce((o, e) => {
@@ -158,7 +156,7 @@ const calculateBestPlays = (board, player, startsTop, piecesOptions, simulating 
   // Check if the piece can become a KING
   piecesOptions
     .filter(f =>
-      !pieceIsKing(f.piece)
+      !pieceIsKing(board, f.piece)
       && f.options.some(s => s.coordinate[0] === (startsTop ? emptyArray.length - 1 : 0)))
     .forEach(f => priority.push({
       index: f.index,
@@ -229,7 +227,7 @@ const calculateBestPlays = (board, player, startsTop, piecesOptions, simulating 
           const bestAmountOfKillsPerPiece = futurePlays
             .map(m => m.options.map(m => m.killedPieces.length
               // If there are KING pieces threatened, add 2 more points (making 3 altogether) for each
-              + m.killedPieces.reduce((o, e) => o += pieceIsKing(e) ? 2 : 0, 0)))
+              + m.killedPieces.reduce((o, e) => o += pieceIsKing(board, e) ? 2 : 0, 0)))
             .map(m => m.sort((a, b) => b - a)[0])
             .filter(f => f > 0)
             .sort((a, b) => b - a);
@@ -245,7 +243,7 @@ const calculateBestPlays = (board, player, startsTop, piecesOptions, simulating 
       // Increase the "oponentPlayValue" if the piece can be killed
       alteredPlayValue: m.oponentPlayValue.result * (m.oponentPlayValue.killable ?
         // If the piece is KING, set the value multiplier to 3; multiply by 2 if not
-        (pieceIsKing(getPlayablePiece(m.piece).piece) ? 3 : 2)
+        (pieceIsKing(board, getPlayablePiece(m.piece).piece) ? 3 : 2)
         // If the action actually kills more than one piece, divide by 2 to reduce the multiplier
         / (piecesOptions.find(f => f.index === m.piece).options[m.option].killedPieces.length ? 2 : 1) :
         1),

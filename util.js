@@ -97,4 +97,10 @@ module.exports = {
 
     return +userInput - 1;
   },
+
+  /**
+   * @param {string[][]} board
+   * @param {number[]} coordinate
+   */
+  pieceIsKing: (board, coordinate) => board[coordinate[0]][coordinate[1]] === board[coordinate[0]][coordinate[1]].toUpperCase(),
 };
