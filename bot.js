@@ -1,5 +1,5 @@
 const moves = require("./movements");
-const { playerList, emptyArray } = require("./constants");
+const { playerList, emptyArray, emptyCellChar } = require("./constants");
 const { log, positionTranslator, pieceIsKing } = require("./util");
 
 
@@ -27,6 +27,93 @@ const getOponentPlayablePieces = (board, player, playerStartsTop) => {
   return moves.locatePieces(board, oponent)
     .map((m, i) => ({ piece: m, index: i, options: moves.calculateMovement(board, oponent, m, !playerStartsTop) }))
     .filter(f => f.options.length);
+};
+
+
+/**
+ * Find the places where the oponent can be killed from
+ * @param {string[][]} board 
+ * @param {string} player 
+ * @param {boolean} startsTop 
+ */
+const getOponentVulnerablePlaces = (board, player, startsTop) => {
+  const oponent = playerList.find(f => f !== player);
+  const oponentPieces = moves.locatePieces(board, oponent);
+  const normalAndKing = [player, player.toUpperCase()];
+
+  /**
+   * @type {{
+    options: {
+        requiresKing: boolean,
+        killDirection: 'right'|'left',
+        coordinate: number[],
+        points: number,
+      }[],
+      coordinate: number[],
+    }[]}
+   */
+  const result = [];
+
+  oponentPieces
+    .reduce((o, e) => {
+      const locations = moves.getAdyacentPositions(board, player, e, 'both');
+      Object.values(locations)
+        .forEach(f => f.forEach(f => {
+          if (!o.some(s => s[0] === f[0] && s[1] === f[1]))
+            o.push(f);
+        }));
+
+      return o;
+    }, [])
+    .forEach(value => {
+      if (board[value[0]][value[1]] !== emptyCellChar)
+        return;
+
+      normalAndKing.forEach(f => {
+        const boardCopy = board.map(m => [...m]);
+        boardCopy[value[0]][value[1]] = f;
+
+        const movements = moves.calculateMovement(boardCopy, player, value, startsTop);
+        if (movements.some(s => s.killedPieces.length)) {
+          const filtered = result.find(f => f.coordinate[0] === value[0] && f.coordinate[1] === value[1]);
+
+          if (filtered)
+            movements
+              .filter(f => f.killedPieces.length)
+              .map(m => ({
+                coordinate: m.coordinate,
+                killDirection: m.killedPieces[0][1] > m.coordinate[1] ? 'left' : 'right',
+                points: m.killedPieces
+                  .map(m => pieceIsKing(boardCopy, m) ? 3 : 2)
+                  .reduce((o, e) => o += e, 0),
+                requiresKing: f === f.toUpperCase(),
+              }))
+              .filter(f => !filtered.options.some(s =>
+                s.coordinate[0] === f.coordinate[0] && s.coordinate[1] === f.coordinate[1]
+                && s.points === f.points))
+              .forEach(f => result.push({
+                options: f,
+                coordinate: value,
+              }));
+          else
+            result.push({
+              options: movements
+                .filter(f => f.killedPieces.length)
+                .map(m => ({
+                  coordinate: m.coordinate,
+                  killDirection: m.killedPieces[0][1] > m.coordinate[1] ? 'left' : 'right',
+                  points: m.killedPieces
+                    .map(m => pieceIsKing(boardCopy, m) ? 3 : 2)
+                    .reduce((o, e) => o += e, 0),
+                  requiresKing: f === f.toUpperCase(),
+                })),
+              coordinate: value,
+            });
+        }
+      });
+    });
+
+  return result;
 };
 
 
@@ -237,6 +324,15 @@ const calculateBestPlays = (board, player, startsTop, piecesOptions, simulating 
               // Add points as: (2 * bestAmountOfPossibleKills) + (amountOfKillOptions - 1)
               .points += (2 * bestAmountOfKillsPerPiece[0]) + (bestAmountOfKillsPerPiece.length - 1);
         });
+
+    // Re-assign 
+    higherRawScore = result.map(m => m.points).sort((a, b) => b - a)[0];
+
+    if (higherRawScore === 1) {
+      const vulnerablePlaces = getOponentVulnerablePlaces(board, player, startsTop);
+
+
+    }
 
     const consequenceResult = simulatedResults.map(m => ({
       ...m,
