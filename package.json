@@ -21,7 +21,7 @@
   },
   "homepage": "https://github.com/ismaelfebles/checkers#readme",
   "dependencies": {
-    "debug": "^4.1.1",
+    "debug": "^4.3.1",
     "dotenv": "^8.2.0"
   }
 }
